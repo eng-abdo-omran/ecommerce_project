@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import Modal from "../../../shared/components/ui/Modal";
 import type { Category } from "../types";

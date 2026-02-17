@@ -30,9 +30,13 @@ class AuthController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
+            $token = $user->createToken('API Token')->plainTextToken;
+
             return response()->json([
                 'message' => 'تم تسجيل الحساب بنجاح',
-                'user' => $user,
+                'token'   => $token,
+                'role'    => $user->role ?? null,
+                'user'    => $user,
             ], 201);
         } catch (ValidationException $e) {
             return response()->json([

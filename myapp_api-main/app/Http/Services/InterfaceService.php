@@ -17,7 +17,7 @@ class InterfaceService
      */
     public function getAllProducts($perPage = 10, $search = null, $categoryId = null)
     {
-        $query = Product::with(['images', 'variants.values', 'category']);
+        $query = Product::with(['productImages', 'variants.values', 'category']);
 
         if ($categoryId) {
             $query->where('category_id', $categoryId);
@@ -110,7 +110,7 @@ class InterfaceService
         }
 
         $query = Product::where('category_id', $categoryId)
-            ->with(['images', 'variants.values']);
+            ->with(['productImages', 'variants.values']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -124,8 +124,8 @@ class InterfaceService
 
         $collection = $paginator->getCollection()->map(function ($prod) {
             $images = [];
-            if (is_iterable($prod->images) && count($prod->images) > 0) {
-                foreach ($prod->images as $img) {
+            if (is_iterable($prod->productImages) && count($prod->productImages) > 0) {
+                foreach ($prod->productImages as $img) {
                     $images[] = [
                         'id' => $img->id,
                         'url' => $img->url,
@@ -198,7 +198,7 @@ class InterfaceService
     }
     public function getProductById($id)
     {
-        $prod = Product::with(['images', 'variants.values', 'category'])->find($id);
+        $prod = Product::with(['productImages', 'variants.values', 'category'])->find($id);
         if (!$prod) return null;
         return $this->transformProductForInterface($prod);
     }
@@ -210,8 +210,8 @@ class InterfaceService
     {
         // تحضير صور المنتج كـ array من الكائنات
         $images = [];
-        if (is_iterable($prod->images) && count($prod->images) > 0) {
-            foreach ($prod->images as $img) {
+        if (is_iterable($prod->productImages) && count($prod->productImages) > 0) {
+            foreach ($prod->productImages as $img) {
                 $images[] = [
                     'id' => $img->id,
                     'url' => $img->url,

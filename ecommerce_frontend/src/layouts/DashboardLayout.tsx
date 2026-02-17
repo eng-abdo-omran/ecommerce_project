@@ -17,7 +17,6 @@ import {
   FaUsers,
   FaStore,
   FaStar,
-  FaHeart,
 } from "react-icons/fa";
 import { useAuthStore } from "../store/auth.store";
 
@@ -39,7 +38,6 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
     { to: "/admin/offers", label: "Offers", icon: <FaTag /> },
     { to: "/admin/coupons", label: "Coupons", icon: <FaTicketAlt /> },
     { to: "/admin/customers", label: "Customers", icon: <FaUsers /> },
-    { to: '/admin/favorites', label: 'Favorites', icon: <FaHeart /> },
     { to: "/admin/stores", label: "Stores", icon: <FaStore  /> },
     { to: '/admin/reviews', label: 'Reviews', icon: <FaStar /> },
     { to: "/admin/settings", label: "Settings", icon: <FaCog /> },

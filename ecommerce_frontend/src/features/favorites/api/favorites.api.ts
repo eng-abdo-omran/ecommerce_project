@@ -1,34 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { http } from "../../../api/axios";
-import type { FavoritesListResponse } from "../types";
 
-export type FavoritesQuery = {
-  page?: number;
-  search?: string;
-  per_page?: number;
+export type FavoritesListResponse = {
+  status: boolean;
+  message?: string;
+  data: {
+    current_page: number;
+    data: any[];
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
 };
 
-export type FavoritePayload = {
-  user_id: number;
-  product_id: number;
-};
-
-export async function getFavorites(params: FavoritesQuery) {
-  const { data } = await http.get<FavoritesListResponse>("/dashboard/favorites", { params });
+export async function getMyFavorites(params: { page?: number; perPage?: number } = {}) {
+  const { data } = await http.get<FavoritesListResponse>("/my/favorites", { params });
   return data;
 }
 
-export async function createFavorite(payload: FavoritePayload) {
-  const { data } = await http.post("/dashboard/favorites", payload);
-  return data;
+export async function toggleFavorite(productId: number) {
+  const { data } = await http.post(`/my/favorites/${productId}/toggle`);
+  return data; // {status,message,data:{is_favorite:true/false}}
 }
-
-export async function updateFavorite(id: number, payload: FavoritePayload) {
-  const { data } = await http.put(`/dashboard/favorites/${id}`, payload);
-  return data;
-}
-
-export async function deleteFavorite(id: number) {
-  const { data } = await http.delete(`/dashboard/favorites/${id}`);
-  return data;
-}
- 

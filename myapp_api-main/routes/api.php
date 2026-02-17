@@ -1,9 +1,12 @@
 
 <?php
 
+use App\Http\Controllers\Api\AddressController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\MeController;
+use App\Http\Controllers\Api\MyOrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\CategoryController;
@@ -18,6 +21,9 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\InterfaceController;
 use App\Http\Middleware\CheckTokenPermission;
+use App\Http\Controllers\Api\UserFavoriteController;
+use App\Http\Controllers\Api\UserCartController;
+
 
 
 // Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
@@ -26,13 +32,58 @@ use App\Http\Middleware\CheckTokenPermission;
 
 Route::prefix('v1')->group(function () {
 
-    // Authentication Routes
+
+    // Public Auth
     Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login']);
+    Route::post('login',    [AuthController::class, 'login']);
+
+    // Public Interface (Guest allowed)
+    Route::prefix('interface')->group(function () {
+        Route::get('categories',     [InterfaceController::class, 'categories']);
+        Route::get('categories/{id}', [InterfaceController::class, 'showCategory']);
+        Route::get('categoriesp/{id}', [InterfaceController::class, 'categoryProducts']);
+        Route::get('products',       [InterfaceController::class, 'products']);
+        Route::get('products/{id}',  [InterfaceController::class, 'showProduct']);
+    });
+
+
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
 
+
+        //  User Dashboard APIs (new)
+        Route::prefix('me')->group(function () {
+            Route::get('/', [MeController::class, 'show']);              // user profile
+            Route::patch('/', [MeController::class, 'update']);          // update profile
+        });
+
+        //  My Orders
+        Route::prefix('my')->group(function () {
+            Route::get('orders', [MyOrderController::class, 'index']);
+            Route::get('orders/{id}', [MyOrderController::class, 'show']);
+        });
+
+        // My Cart
+        Route::prefix('my')->group(function () {
+            Route::get('cart', [UserCartController::class, 'show']);
+            Route::post('cart/items', [UserCartController::class, 'addItem']);
+            Route::patch('cart/items/{productId}', [UserCartController::class, 'updateItem']);
+            Route::delete('cart/items/{productId}', [UserCartController::class, 'removeItem']);
+            Route::post('cart/clear', [UserCartController::class, 'clear']);
+            Route::post('cart/merge', [UserCartController::class, 'merge']); // اختياري بس مهم
+        });
+
+
+        // Addresses
+        Route::apiResource('addresses', AddressController::class);
+
+
+        Route::prefix('my')->group(function () {
+            Route::get('favorites', [UserFavoriteController::class, 'index']);
+            Route::post('favorites/{productId}/toggle', [UserFavoriteController::class, 'toggle']);
+        });
+         
         /**
          * Dashboard Routes (With Permission Middleware)
          */
@@ -113,7 +164,7 @@ Route::prefix('v1')->group(function () {
                 Route::apiResource('orders', OrderController::class);
                 // statys workflow route
                 Route::patch('orders/{id}/status', [OrderController::class, 'updateStatus']);
-                
+
                 // Favorite Management Routes (CRUD API)
                 /*  | HTTP Method | Endpoint                  | Action  | Controller Method |
             | ----------- | -------------------------| ------- | ----------------- |
@@ -175,12 +226,5 @@ Route::prefix('v1')->group(function () {
          *  | GET         | `/api/v1/interface/products`            | List Products           | `products()`          |
          *  | GET         | `/api/v1/interface/products/{id}`       | Show Product            | `showProduct()`       |
          */
-        Route::prefix('interface')->group(function () {
-            Route::get('categories', [InterfaceController::class, 'categories']);
-            Route::get('categories/{id}', [InterfaceController::class, 'showCategory']);
-            Route::get('categoriesp/{id}', [InterfaceController::class, 'categoryProducts']);
-            Route::get('products', [InterfaceController::class, 'products']);
-            Route::get('products/{id}', [InterfaceController::class, 'showProduct']);
-        });
     });
 });

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { http } from "../../../api/axios";
 import type { ProductsListResponse } from "../types";
-import type { Product } from "../types";
 
 export type ProductsQuery = {
   page?: number;
@@ -63,7 +62,7 @@ function toFormData(payload: ProductPayload) {
   appendIf(fd, "category_id", payload.category_id);
   appendIf(fd, "brand_id", payload.brand_id);
 
-  // ✅ Backend expects "images" for main image
+  // Backend expects "images" for main image
   if (payload.images instanceof File) fd.append("images", payload.images);
 
   return fd;
