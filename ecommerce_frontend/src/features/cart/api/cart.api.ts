@@ -2,8 +2,10 @@
 import { http } from "../../../api/axios";
 
 export type CartItemDTO = {
+  id: number;                
   product_id: number;
   quantity: number;
+  options?: Array<{ variant_id: number; value_id: number }>;
   unit_price?: number;
   subtotal?: number;
   product?: any;
@@ -23,18 +25,22 @@ export async function getMyCart() {
   return data;
 }
 
-export async function addCartItem(payload: { product_id: number; quantity?: number }) {
+export async function addCartItem(payload: {
+  product_id: number;
+  quantity?: number;
+  options?: Array<{ variant_id: number; value_id: number }>;
+}) {
   const { data } = await http.post("/my/cart/items", payload);
   return data;
 }
 
-export async function updateCartItem(productId: number, payload: { quantity: number }) {
-  const { data } = await http.patch(`/my/cart/items/${productId}`, payload);
+export async function updateCartItem(itemId: number, payload: { quantity: number }) {
+  const { data } = await http.patch(`/my/cart/items/${itemId}`, payload);
   return data;
 }
 
-export async function removeCartItem(productId: number) {
-  const { data } = await http.delete(`/my/cart/items/${productId}`);
+export async function removeCartItem(itemId: number) {
+  const { data } = await http.delete(`/my/cart/items/${itemId}`);
   return data;
 }
 
@@ -43,7 +49,3 @@ export async function clearCart() {
   return data;
 }
 
-export async function mergeCart(payload: { items: { product_id: number; quantity: number }[] }) {
-  const { data } = await http.post("/my/cart/merge", payload);
-  return data;
-}

@@ -1,45 +1,55 @@
 import { create } from "zustand";
 
 type FavoritesState = {
-  ids: number[];
-  toggle: (id: number) => void;
+  ids: Record<number, true>;
+  setAll: (ids: number[]) => void;
   has: (id: number) => boolean;
-  count: () => number;
+  toggle: (id: number) => void;
+
   clear: () => void;
 };
 
-function loadFavs(): number[] {
+function loadIds(): Record<number, true> {
   try {
-    const raw = localStorage.getItem("fav_ids");
-    return raw ? (JSON.parse(raw) as number[]) : [];
+    const raw = localStorage.getItem("favorite_ids");
+    if (!raw) return {};
+    const arr = JSON.parse(raw) as number[];
+    const map: Record<number, true> = {};
+    for (const id of arr) map[id] = true;
+    return map;
   } catch {
-    return [];
+    return {};
   }
 }
 
-function saveFavs(ids: number[]) {
-  localStorage.setItem("fav_ids", JSON.stringify(ids));
+function persist(map: Record<number, true>) {
+  const ids = Object.keys(map).map((x) => Number(x));
+  localStorage.setItem("favorite_ids", JSON.stringify(ids));
 }
 
 export const useFavoritesStore = create<FavoritesState>((set, get) => ({
-  ids: loadFavs(),
+  ids: loadIds(),
 
-  toggle: (id) => {
-    const s = new Set(get().ids);
-    if (s.has(id)) s.delete(id);
-    else s.add(id);
-
-    const next = Array.from(s);
-    saveFavs(next);
-    set({ ids: next });
+  setAll: (ids) => {
+    const map: Record<number, true> = {};
+    ids.forEach((id) => (map[id] = true));
+    persist(map);
+    set({ ids: map });
   },
 
-  has: (id) => get().ids.includes(id),
+  has: (id) => Boolean(get().ids[id]),
 
-  count: () => get().ids.length,
+  toggle: (id) => {
+    const next = { ...get().ids };
+    if (next[id]) delete next[id];
+    else next[id] = true;
+    persist(next);
+    set({ ids: next });
+  },
+  
 
   clear: () => {
-    saveFavs([]);
-    set({ ids: [] });
+    localStorage.removeItem("favorite_ids");
+    set({ ids: {} });
   },
 }));

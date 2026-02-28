@@ -16,17 +16,46 @@ import { useInterfaceProducts } from "../../features/storefront/hooks/useInterfa
 import { useAuthGate } from "../../features/auth/hooks/useAuthGate";
 import { useAddToCart } from "../../features/cart/hooks/useCartMutations";
 import { useToggleFavorite } from "../../features/favorites/hooks/useToggleFavorite";
+import { useFavoritesStore } from "../../store/favorites.store"; //  جديد
 
 function toNumber(price: any) {
   const n = Number(price);
   return Number.isFinite(n) ? n : 0;
 }
+
 function formatMoney(value: number, locale = "ar-EG", currency = "EGP") {
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(value);
   } catch {
     return `${value.toFixed(2)} ${currency}`;
   }
+}
+
+type VariantSelectionState = Record<number, number>; // variant_id => value_id
+
+/**  Heart Icon SVG: ثابت المقاس (مش بيكبر في الموبايل) */
+function HeartIcon({
+  filled,
+  className = "",
+}: {
+  filled: boolean;
+  className?: string;
+}) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false">
+      <path
+        d="M12 21s-7.2-4.35-9.6-8.55C.6 9 2.4 5.7 6 5.1c1.8-.3 3.6.6 4.8 2.1C12 5.7 13.8 4.8 15.6 5.1 19.2 5.7 21 9 21.6 12.45 19.2 16.65 12 21 12 21z"
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export default function ProductDetails() {
@@ -48,8 +77,16 @@ export default function ProductDetails() {
   const { data, isLoading, isError } = useInterfaceProduct(productId);
   const product: any = data?.data;
 
+  //  Favorites: source of truth من store (يظل صحيح بعد refresh)
+  const fav = useFavoritesStore((s) => s.has(productId));
+  const toggleLocal = useFavoritesStore((s) => s.toggle);
+
+  // الصور
   const images: any[] = Array.isArray(product?.images) ? product.images : [];
-  const mainImageSrc = resolvePublicImage(product?.main_image) || resolvePublicImage(images);
+  const mainImageSrc =
+    resolvePublicImage(product?.main_image) ||
+    resolvePublicImage(product?.images) ||
+    resolvePublicImage(images);
 
   const activeImageSrc = useMemo(() => {
     if (images.length > 0) {
@@ -63,10 +100,24 @@ export default function ProductDetails() {
   const relatedQuery = useInterfaceProducts({ page: 1, perPage: 8, category: categoryId });
   const relatedProducts: any[] = (relatedQuery.data?.data?.data ?? []).filter((p: any) => p?.id !== productId);
 
+  // variants
   const variants: any[] = Array.isArray(product?.variants) ? product.variants : [];
-  const [variantSelection, setVariantSelection] = useState<Record<string, string>>({});
 
-  if (isLoading) return <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />;
+  // selection بالـ IDs
+  const [variantSelection, setVariantSelection] = useState<VariantSelectionState>({});
+
+  // هل اختار كل الـ variants؟
+  const allVariantsSelected = useMemo(() => {
+    if (!variants.length) return true;
+    return variants.every((v: any) => {
+      const vid = Number(v?.id);
+      return vid && variantSelection[vid];
+    });
+  }, [variants, variantSelection]);
+
+  if (isLoading) {
+    return <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />;
+  }
 
   if (isError || !product) {
     return (
@@ -90,32 +141,86 @@ export default function ProductDetails() {
         await navigator.share({ title, url });
         return;
       }
-    } catch { /* empty */ }
+    } catch {
+      /* empty */
+    }
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("تم نسخ الرابط ✅");
+      toast.success("تم نسخ الرابط ");
     } catch {
       window.prompt("انسخ الرابط:", url);
     }
   }
 
-  function addToCart() {
-    requireAuth(() =>
-      addToCartMut.mutate({ product_id: product.id, quantity: qty })
-    );
+  function buildOptionsPayload() {
+    // [{variant_id, value_id}]
+    const entries = Object.entries(variantSelection);
+    return entries.map(([variant_id, value_id]) => ({
+      variant_id: Number(variant_id),
+      value_id: Number(value_id),
+    }));
   }
 
+  function addToCart() {
+    requireAuth(() => {
+      if (qty < 1) {
+        toast.error("الكمية غير صحيحة");
+        return;
+      }
+      if (!allVariantsSelected) {
+        toast.error("من فضلك اختر كل الخيارات المطلوبة (مثل اللون/المقاس)");
+        return;
+      }
+
+      const options = buildOptionsPayload();
+
+      addToCartMut.mutate(
+        {
+          product_id: product.id,
+          quantity: qty,
+          options,
+        } as any,
+        {
+          onSuccess: () => toast.success("تمت الإضافة إلى السلة"),
+          onError: () => toast.error("تعذر إضافة المنتج للسلة"),
+        }
+      );
+    });
+  }
+
+  //  Toggle Favorite (optimistic + rollback) باستخدام store
   function toggleFav() {
-    requireAuth(() => toggleFavMut.mutate(product.id));
+    requireAuth(() => {
+      const id = product.id;
+      const next = !fav;
+
+      // optimistic
+      toggleLocal(id);
+
+      toggleFavMut.mutate(id, {
+        onError: () => {
+          // rollback
+          toggleLocal(id);
+          toast.error("تعذر تحديث المفضلة");
+        },
+        onSuccess: () => {
+          toast.success(next ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة");
+        },
+      });
+    });
   }
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500">
-        <Link to="/" className="hover:text-gray-800">{t("nav.home", { defaultValue: "الرئيسية" })}</Link>
+        <Link to="/" className="hover:text-gray-800">
+          {t("nav.home", { defaultValue: "الرئيسية" })}
+        </Link>
         <span className="mx-2">/</span>
-        <Link to="/shop" className="hover:text-gray-800">{t("nav.shop", { defaultValue: "المتجر" })}</Link>
+        <Link to="/shop" className="hover:text-gray-800">
+          {t("nav.shop", { defaultValue: "المتجر" })}
+        </Link>
         <span className="mx-2">/</span>
         <span className="text-gray-800 font-medium">{product.name}</span>
       </div>
@@ -154,6 +259,7 @@ export default function ProductDetails() {
                     className={`shrink-0 h-16 w-16 sm:h-20 sm:w-20 rounded-2xl border overflow-hidden bg-gray-50 transition ${
                       active ? "ring-2 ring-black/20 border-black/30" : "hover:border-gray-300"
                     }`}
+                    type="button"
                   >
                     {thumb ? (
                       <img
@@ -179,28 +285,48 @@ export default function ProductDetails() {
                 {product.name}
               </h1>
 
+              {/*  Favorite icon button (SVG + stateful) */}
               <button
                 onClick={toggleFav}
-                className="h-11 w-11 rounded-2xl border bg-white hover:bg-gray-50 grid place-items-center"
-                title="مفضلة"
+                disabled={toggleFavMut.isPending}
+                className="
+                  h-11 w-11 rounded-2xl border bg-white
+                  grid place-items-center
+                  transition-all duration-200
+                  hover:bg-gray-50 hover:shadow-sm hover:border-gray-300
+                  active:scale-[0.98]
+                  focus:outline-none focus:ring-2 focus:ring-black/10
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                "
+                title={fav ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                type="button"
               >
-                <span className="text-gray-700">♥</span>
+                <HeartIcon
+                  filled={fav}
+                  className={`h-[18px] w-[18px] ${fav ? "text-red-600" : "text-gray-700"} transition`}
+                />
               </button>
             </div>
 
             <div className="mt-3 flex flex-wrap items-baseline gap-3">
-              <div className="text-2xl font-extrabold text-gray-900">{formatMoney(price, locale)}</div>
+              <div className="text-2xl font-extrabold text-gray-900">
+                {formatMoney(price, locale)}
+              </div>
               {compare > 0 && compare > price ? (
                 <div className="text-sm text-gray-500 line-through">{formatMoney(compare, locale)}</div>
               ) : null}
               <div className="ms-auto">
-                <Button variant="secondary" size="sm" onClick={handleShare}>مشاركة / نسخ الرابط</Button>
+                <Button variant="secondary" size="sm" onClick={handleShare}>
+                  مشاركة / نسخ الرابط
+                </Button>
               </div>
             </div>
 
             <div className="mt-3 text-sm text-gray-600 space-y-1">
               {product.sku ? (
-                <div>SKU: <span className="text-gray-800 font-medium">{product.sku}</span></div>
+                <div>
+                  SKU: <span className="text-gray-800 font-medium">{product.sku}</span>
+                </div>
               ) : null}
               {product.category?.name ? (
                 <div>
@@ -218,25 +344,35 @@ export default function ProductDetails() {
             {variants.length > 0 ? (
               <div className="mt-5 space-y-3">
                 <div className="font-semibold text-gray-900">الخيارات</div>
-                {variants.map((v, i) => {
+
+                {variants.map((v: any, i: number) => {
+                  const variantId = Number(v?.id);
                   const name = v?.name ?? `Option ${i + 1}`;
                   const values: any[] = Array.isArray(v?.values) ? v.values : [];
-                  const key = String(name);
 
                   return (
-                    <div key={key} className="space-y-2">
+                    <div key={variantId || name} className="space-y-2">
                       <div className="text-sm font-medium text-gray-800">{name}</div>
+
                       <div className="flex flex-wrap gap-2">
-                        {values.map((val, j) => {
+                        {values.map((val: any, j: number) => {
+                          const valueId = Number(val?.id);
                           const label = val?.value ?? val?.name ?? `Value ${j + 1}`;
-                          const selected = variantSelection[key] === String(label);
+                          const selected = variantId && valueId && variantSelection[variantId] === valueId;
+
                           return (
                             <button
-                              key={`${key}-${j}`}
-                              onClick={() => setVariantSelection((s) => ({ ...s, [key]: String(label) }))}
+                              key={`${variantId}-${valueId || j}`}
+                              onClick={() => {
+                                if (!variantId || !valueId) return;
+                                setVariantSelection((s) => ({ ...s, [variantId]: valueId }));
+                              }}
                               className={`px-3 h-9 rounded-full border text-sm transition ${
-                                selected ? "bg-black text-white border-black" : "bg-white hover:bg-gray-50"
+                                selected
+                                  ? "bg-black text-white border-black"
+                                  : "bg-white hover:bg-gray-50 hover:border-gray-300"
                               }`}
+                              type="button"
                             >
                               {label}
                             </button>
@@ -246,31 +382,74 @@ export default function ProductDetails() {
                     </div>
                   );
                 })}
+
+                {!allVariantsSelected ? (
+                  <div className="text-xs text-red-600">
+                    اختر كل الخيارات المطلوبة قبل الإضافة للسلة.
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
             {/* Qty */}
             <div className="mt-5 flex items-center justify-between gap-3">
               <div className="text-sm font-semibold text-gray-900">الكمية</div>
-              <div className="inline-flex items-center rounded-2xl border bg-white">
-                <button className="h-11 w-11 grid place-items-center hover:bg-gray-50 rounded-s-2xl disabled:opacity-50"
+
+              <div className="inline-flex items-center rounded-2xl border bg-white shadow-sm overflow-hidden">
+                <button
+                  className="
+                    h-11 w-11 grid place-items-center
+                    transition-all duration-200
+                    hover:bg-gray-50 active:bg-gray-100 active:scale-[0.97]
+                    disabled:opacity-50
+                  "
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                   disabled={qty <= 1}
-                >−</button>
-                <div className="h-11 min-w-14 px-3 grid place-items-center text-sm font-extrabold">{qty}</div>
-                <button className="h-11 w-11 grid place-items-center hover:bg-gray-50 rounded-e-2xl"
+                  type="button"
+                  title="تقليل"
+                >
+                  <span className="text-lg font-bold">−</span>
+                </button>
+
+                <div className="h-11 min-w-14 px-3 grid place-items-center text-sm font-extrabold">
+                  {qty}
+                </div>
+
+                <button
+                  className="
+                    h-11 w-11 grid place-items-center
+                    transition-all duration-200
+                    hover:bg-gray-50 active:bg-gray-100 active:scale-[0.97]
+                  "
                   onClick={() => setQty((q) => q + 1)}
-                >+</button>
+                  type="button"
+                  title="زيادة"
+                >
+                  <span className="text-lg font-bold">+</span>
+                </button>
               </div>
             </div>
 
             {/* Actions */}
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Button variant="primary" isLoading={addToCartMut.isPending} onClick={addToCart}>
+              <Button
+                variant="primary"
+                isLoading={addToCartMut.isPending}
+                onClick={addToCart}
+                disabled={!allVariantsSelected}
+              >
                 {t("actions.addToCart", { defaultValue: "أضف للسلة" })}
               </Button>
-              <Button variant="secondary" isLoading={toggleFavMut.isPending} onClick={toggleFav}>
-                {t("actions.addFav", { defaultValue: "مفضلة" })}
+
+              {/*  Favorite button reflects state */}
+              <Button
+                variant={fav ? "danger" : "secondary"}
+                isLoading={toggleFavMut.isPending}
+                onClick={toggleFav}
+              >
+                {fav
+                  ? t("actions.removeFav", { defaultValue: "إزالة" })
+                  : t("actions.addFav", { defaultValue: "مفضلة" })}
               </Button>
             </div>
           </div>
@@ -283,6 +462,7 @@ export default function ProductDetails() {
                   <button
                     className="w-full px-4 py-3 flex items-center justify-between text-start font-semibold"
                     onClick={() => setOpenSection((s) => (s === "details" ? null : "details"))}
+                    type="button"
                   >
                     <span>التفاصيل</span>
                     <span className="text-gray-400">{openSection === "details" ? "−" : "+"}</span>
@@ -300,6 +480,7 @@ export default function ProductDetails() {
                   <button
                     className="w-full px-4 py-3 flex items-center justify-between text-start font-semibold"
                     onClick={() => setOpenSection((s) => (s === "features" ? null : "features"))}
+                    type="button"
                   >
                     <span>المميزات</span>
                     <span className="text-gray-400">{openSection === "features" ? "−" : "+"}</span>
@@ -334,10 +515,19 @@ export default function ProductDetails() {
         <div className="border-t bg-white/90 backdrop-blur p-3">
           <div className="max-w-7xl mx-auto flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <div className="text-xs text-gray-500">{t("cart.total", { defaultValue: "السعر" })}</div>
-              <div className="text-base font-extrabold text-gray-900 truncate">{formatMoney(price, locale)}</div>
+              <div className="text-xs text-gray-500">
+                {t("cart.total", { defaultValue: "السعر" })}
+              </div>
+              <div className="text-base font-extrabold text-gray-900 truncate">
+                {formatMoney(price, locale)}
+              </div>
             </div>
-            <Button className="h-11 px-4 rounded-2xl" isLoading={addToCartMut.isPending} onClick={addToCart}>
+            <Button
+              className="h-11 px-4 rounded-2xl"
+              isLoading={addToCartMut.isPending}
+              onClick={addToCart}
+              disabled={!allVariantsSelected}
+            >
               {t("actions.addToCart", { defaultValue: "أضف للسلة" })}
             </Button>
           </div>
@@ -349,7 +539,9 @@ export default function ProductDetails() {
         <div className="flex items-end justify-between">
           <h2 className="text-xl font-extrabold text-gray-900">منتجات مشابهة</h2>
           <Link to="/shop">
-            <Button variant="secondary" size="sm">عرض المزيد</Button>
+            <Button variant="secondary" size="sm">
+              عرض المزيد
+            </Button>
           </Link>
         </div>
 
@@ -360,7 +552,11 @@ export default function ProductDetails() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {relatedProducts.map((p: any) => (
-              <Link key={p.id} to={`/products/${p.id}`} className="rounded-3xl border bg-white p-3 shadow-sm hover:shadow-md transition block">
+              <Link
+                key={p.id}
+                to={`/products/${p.id}`}
+                className="rounded-3xl border bg-white p-3 shadow-sm hover:shadow-md transition block"
+              >
                 <div className="aspect-square rounded-2xl border bg-gray-50 overflow-hidden">
                   <img
                     src={resolvePublicImage(p.main_image) || resolvePublicImage(p.images)}

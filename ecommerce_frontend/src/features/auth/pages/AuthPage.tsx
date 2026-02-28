@@ -19,9 +19,9 @@ export default function AuthPage() {
 
   // fields
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("test@example.com");
-  const [password, setPassword] = useState("password");
-  const [password2, setPassword2] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
 

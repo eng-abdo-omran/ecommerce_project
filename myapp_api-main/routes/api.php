@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AddressController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\MyOrderController;
 use App\Http\Controllers\UserController;
@@ -23,8 +24,7 @@ use App\Http\Controllers\InterfaceController;
 use App\Http\Middleware\CheckTokenPermission;
 use App\Http\Controllers\Api\UserFavoriteController;
 use App\Http\Controllers\Api\UserCartController;
-
-
+use App\Http\Controllers\Dashboard\OverviewController;
 
 // Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 //     return $request->user();
@@ -68,10 +68,13 @@ Route::prefix('v1')->group(function () {
         Route::prefix('my')->group(function () {
             Route::get('cart', [UserCartController::class, 'show']);
             Route::post('cart/items', [UserCartController::class, 'addItem']);
-            Route::patch('cart/items/{productId}', [UserCartController::class, 'updateItem']);
-            Route::delete('cart/items/{productId}', [UserCartController::class, 'removeItem']);
+            Route::patch('cart/items/{itemId}', [UserCartController::class, 'updateItem']);
+            Route::delete('cart/items/{itemId}', [UserCartController::class, 'removeItem']);
             Route::post('cart/clear', [UserCartController::class, 'clear']);
-            Route::post('cart/merge', [UserCartController::class, 'merge']); // اختياري بس مهم
+            Route::post('cart/merge', [UserCartController::class, 'merge']);
+
+            // Checkout endpoint
+            Route::post('checkout', [CheckoutController::class, 'store']);
         });
 
 
@@ -82,14 +85,16 @@ Route::prefix('v1')->group(function () {
         Route::prefix('my')->group(function () {
             Route::get('favorites', [UserFavoriteController::class, 'index']);
             Route::post('favorites/{productId}/toggle', [UserFavoriteController::class, 'toggle']);
+            Route::get('favorites/ids', [UserFavoriteController::class, 'ids']);
         });
-         
+
         /**
          * Dashboard Routes (With Permission Middleware)
          */
         Route::prefix('dashboard')->middleware(CheckTokenPermission::class)
             ->group(function () {
 
+                Route::get('overview', [OverviewController::class, 'index']);
 
                 Route::get('user', [AuthController::class, 'user']);
 

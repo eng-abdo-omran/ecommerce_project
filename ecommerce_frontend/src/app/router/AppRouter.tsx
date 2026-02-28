@@ -16,8 +16,7 @@ import Cart from "../../pages/public/Cart";
 import Favorites from "../../pages/public/Favorites";
 import ProductDetails from "../../pages/public/ProductDetails";
 
-// User area
-import AccountPage from "../../pages/public/Account";
+
 
 // User Dashboard
 import AccountLayout from "../../features/account/layouts/AccountLayout";
@@ -42,6 +41,8 @@ import CouponsPage from "../../features/coupons/pages/CouponsPage";
 import CustomersPage from "../../features/customers/pages/CustomersPage";
 import StoresPage from "../../features/stores/pages/StoresPage";
 import ReviewsPage from "../../features/reviews/pages/ReviewsPage";
+import CheckoutPage from "../../features/checkout/pages/CheckoutPage";
+import AdminSettingsPage from "../../features/admin/pages/AdminSettingsPage";
 
 export default function AppRouter() {
   return (
@@ -64,11 +65,7 @@ export default function AppRouter() {
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/favorites" element={<Favorites />} />
-          </Route>
-
-          {/* User Area */}
-          <Route element={<RequireUser />}>
-            <Route path="/account" element={<AccountPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
           </Route>
 
           {/* User Dashboard */}
@@ -107,6 +104,7 @@ export default function AppRouter() {
             <Route path="/admin/customers" element={<CustomersPage />} />
             <Route path="/admin/stores" element={<StoresPage />} />
             <Route path="/admin/reviews" element={<ReviewsPage />} />
+            <Route path="/admin/settings" element={<AdminSettingsPage />} />
           </Route>
         </Route>
 

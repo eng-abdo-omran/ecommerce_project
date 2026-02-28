@@ -56,4 +56,18 @@ class UserFavoriteController extends Controller
             'data' => ['is_favorite' => true],
         ]);
     }
+    public function ids(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        // لو اسم الموديل Favorite:
+        $ids = Favorite::where('user_id', $userId)
+            ->pluck('product_id')
+            ->values();
+
+        return response()->json([
+            'status' => true,
+            'data' => $ids,
+        ]);
+    }
 }

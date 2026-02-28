@@ -4,7 +4,8 @@ import ToastProvider from "./ToastProvider";
 import { useLocaleStore } from "../../store/locale.store";
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
-  const { locale, dir } = useLocaleStore();
+  const locale = useLocaleStore((s) => s.locale);
+  const dir = useLocaleStore((s) => s.dir);
 
   useEffect(() => {
     document.documentElement.lang = locale;

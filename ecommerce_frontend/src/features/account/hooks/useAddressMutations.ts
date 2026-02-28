@@ -10,7 +10,7 @@ export function useCreateAddress() {
     mutationFn: createAddress,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: accountKeys.addresses });
-      toast.success("تمت إضافة العنوان ✅");
+      toast.success("تمت إضافة العنوان ");
     },
     onError: () => toast.error("تعذر إضافة العنوان"),
   });
@@ -22,7 +22,7 @@ export function useUpdateAddress() {
     mutationFn: ({ id, payload }: { id: number; payload: any }) => updateAddress(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: accountKeys.addresses });
-      toast.success("تم تحديث العنوان ✅");
+      toast.success("تم تحديث العنوان ");
     },
     onError: () => toast.error("تعذر تحديث العنوان"),
   });
@@ -34,7 +34,7 @@ export function useDeleteAddress() {
     mutationFn: (id: number) => deleteAddress(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: accountKeys.addresses });
-      toast.success("تم حذف العنوان ✅");
+      toast.success("تم حذف العنوان ");
     },
     onError: () => toast.error("تعذر حذف العنوان"),
   });

@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+
 import { Button } from "../../shared/components/ui/Button";
 import { EmptyState } from "../../shared/components/ui/EmptyState";
 import { Loader } from "../../shared/components/ui/Loader";
@@ -15,6 +16,27 @@ import {
 } from "../../features/cart/hooks/useCartMutations";
 
 import { resolvePublicImage } from "../../shared/utils/assets";
+import { getApiErrorMessage } from "../../shared/utils/error";
+
+type CartOption =
+  | { variant_id: number; value_id: number }
+  | {
+      variant_id: number;
+      value_id: number;
+      variant_name?: string;
+      value?: string;
+      value_name?: string;
+    };
+
+type CartItemUI = {
+  id: number;
+  product_id: number;
+  quantity: number;
+  unit_price?: number;
+  subtotal?: number;
+  options?: CartOption[] | null;
+  product?: any;
+};
 
 function formatMoney(value: number, locale = "ar-EG", currency = "EGP") {
   try {
@@ -28,7 +50,38 @@ function formatMoney(value: number, locale = "ar-EG", currency = "EGP") {
   }
 }
 
+function renderOptions(opts?: CartOption[] | null) {
+  if (!opts || !Array.isArray(opts) || opts.length === 0) return null;
+
+  const chips = opts.map((o, idx) => {
+    const vName = (o as any).variant_name;
+    const valName = (o as any).value_name ?? (o as any).value;
+
+    const label =
+      vName && valName
+        ? `${vName}: ${valName}`
+        : `V#${(o as any).variant_id} → ${`ID#${(o as any).value_id}`}`;
+
+    return (
+      <span
+        key={`${(o as any).variant_id}-${(o as any).value_id}-${idx}`}
+        className="
+          inline-flex items-center rounded-full
+          border border-gray-200 bg-gray-50
+          px-2.5 py-1 text-xs text-gray-700
+          shadow-sm
+        "
+      >
+        {label}
+      </span>
+    );
+  });
+
+  return <div className="mt-2 flex flex-wrap gap-2">{chips}</div>;
+}
+
 export default function Cart() {
+  const nav = useNavigate();
   const { t, i18n } = useTranslation();
   const locale = i18n.language === "en" ? "en-US" : "ar-EG";
 
@@ -39,21 +92,31 @@ export default function Cart() {
   const removeMut = useRemoveCartItem();
   const clearMut = useClearCart();
 
-  const items = cartQ.data?.data?.items ?? [];
-  const total = cartQ.data?.data?.total ?? 0;
+  const items: CartItemUI[] = (cartQ.data?.data?.items ?? []) as any;
+  const total = Number(cartQ.data?.data?.total ?? 0);
 
-  const shipping = useMemo(
-    () => (total >= 2000 ? 0 : total > 0 ? 50 : 0),
-    [total],
-  );
+  // ⚠️ لو عندك Free shipping فوق 2000، لازم الباك يطبق نفس القاعدة في checkout
+  const shipping = useMemo(() => (total >= 2000 ? 0 : total > 0 ? 50 : 0), [total]);
   const grandTotal = total + shipping;
 
-  if (cartQ.isLoading)
+  const isBusy = updateMut.isPending || removeMut.isPending || clearMut.isPending;
+
+  if (cartQ.isLoading) {
+    return <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />;
+  }
+
+  if (cartQ.isError) {
     return (
-      <Loader
-        label={t("common.loading", { defaultValue: "جاري التحميل..." })}
-      />
+      <div className="py-10">
+        <EmptyState
+          title="حدث خطأ أثناء تحميل السلة"
+          description={getApiErrorMessage(cartQ.error)}
+          actionLabel="إعادة المحاولة"
+          onAction={() => cartQ.refetch()}
+        />
+      </div>
     );
+  }
 
   if (!items.length) {
     return (
@@ -64,13 +127,11 @@ export default function Cart() {
             defaultValue: "ابدأ بإضافة منتجات من المتجر، وستظهر هنا.",
           })}
           actionLabel={t("nav.shop", { defaultValue: "المتجر" })}
-          onAction={() => (window.location.href = "/shop")}
+          onAction={() => nav("/shop")}
         />
         <div className="mt-4 flex justify-center">
           <Link to="/shop">
-            <Button variant="secondary">
-              {t("nav.shop", { defaultValue: "المتجر" })}
-            </Button>
+            <Button variant="secondary">{t("nav.shop", { defaultValue: "المتجر" })}</Button>
           </Link>
         </div>
       </div>
@@ -78,32 +139,39 @@ export default function Cart() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 lg:pb-0">
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-extrabold text-gray-900">
             {t("cart.title", { defaultValue: "سلة التسوق" })}
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 mt-1">
             {t("cart.itemsCount", { defaultValue: "عدد العناصر:" })}{" "}
             <span className="font-semibold text-gray-800">{items.length}</span>
           </p>
         </div>
 
-        <Button
-          variant="secondary"
-          isLoading={clearMut.isPending}
-          onClick={() => clearMut.mutate()}
-        >
-          {t("cart.clear", { defaultValue: "تفريغ السلة" })}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            isLoading={clearMut.isPending}
+            onClick={() => clearMut.mutate()}
+            disabled={isBusy}
+          >
+            {t("cart.clear", { defaultValue: "تفريغ السلة" })}
+          </Button>
+
+          <Button variant="primary" onClick={() => nav("/checkout")} disabled={isBusy}>
+            إتمام الشراء
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Items */}
         <div className="lg:col-span-2 space-y-3">
-          {items.map((it: any) => {
+          {items.map((it) => {
             const p = it.product ?? {};
             const price = Number(it.unit_price ?? p.price ?? 0);
             const qty = Number(it.quantity ?? 1);
@@ -113,8 +181,12 @@ export default function Cart() {
 
             return (
               <div
-                key={it.product_id}
-                className="rounded-3xl border bg-white p-4 shadow-sm"
+                key={it.id}
+                className="
+                  rounded-3xl border bg-white p-4 shadow-sm
+                  transition
+                  hover:shadow-md hover:border-gray-300
+                "
               >
                 <div className="flex gap-4">
                   <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl border bg-gray-50">
@@ -124,9 +196,7 @@ export default function Cart() {
                         alt={p?.name ?? ""}
                         className="h-full w-full object-cover"
                         loading="lazy"
-                        onError={(e) =>
-                          (e.currentTarget.src = "/placeholder.png")
-                        }
+                        onError={(e) => (e.currentTarget.src = "/placeholder.png")}
                       />
                     ) : (
                       <div className="h-full w-full grid place-items-center text-xs text-gray-400">
@@ -134,56 +204,108 @@ export default function Cart() {
                       </div>
                     )}
                   </div>
+
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-semibold text-gray-900 line-clamp-1">
                           {p.name ?? `#${it.product_id}`}
                         </div>
-                        <div className="mt-1 text-sm text-gray-600">
+
+                        {/* Variants options */}
+                        {renderOptions(it.options)}
+
+                        <div className="mt-2 text-sm text-gray-600">
                           {formatMoney(price, locale)}
                         </div>
                       </div>
 
+                      {/*  Remove button (Stylish) */}
                       <button
-                        onClick={() => removeMut.mutate(it.product_id)}
-                        className="text-sm text-red-600 hover:text-red-700"
+                        onClick={() => removeMut.mutate(it.id)}
+                        disabled={isBusy}
+                        type="button"
+                        className="
+                          inline-flex items-center gap-2
+                          rounded-2xl border border-red-200
+                          bg-red-50/40 px-3 py-2
+                          text-sm font-semibold text-red-700
+                          transition-all duration-200
+                          hover:bg-red-50 hover:border-red-300 hover:shadow-sm
+                          active:scale-[0.98]
+                          focus:outline-none focus:ring-2 focus:ring-red-500/20
+                          disabled:opacity-60 disabled:cursor-not-allowed
+                        "
+                        title={t("actions.remove", { defaultValue: "حذف" })}
                       >
-                        {t("actions.remove", { defaultValue: "حذف" })}
+                        {/* icon */}
+                        <span>{t("actions.remove", { defaultValue: "حذف" })}</span>
                       </button>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                      <div className="inline-flex items-center rounded-2xl border bg-white">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      {/* Qty Control (Premium hover) */}
+                      <div
+                        className="
+                          inline-flex items-center rounded-2xl border bg-white
+                          shadow-sm
+                          overflow-hidden
+                        "
+                      >
                         <button
-                          className="h-10 w-10 grid place-items-center hover:bg-gray-50 rounded-s-2xl disabled:opacity-50"
+                          type="button"
                           onClick={() =>
                             updateMut.mutate({
-                              productId: it.product_id,
+                              itemId: it.id,
                               quantity: Math.max(1, qty - 1),
                             })
                           }
-                          disabled={updateMut.isPending || qty <= 1}
+                          disabled={isBusy || qty <= 1}
+                          className="
+                            h-10 w-10 grid place-items-center
+                            text-gray-700
+                            transition-all duration-200
+                            hover:bg-gray-50 hover:text-gray-900
+                            active:bg-gray-100 active:scale-[0.96]
+                            focus:outline-none focus:ring-2 focus:ring-black/10
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          "
+                          aria-label="Decrease quantity"
+                          title="تقليل الكمية"
                         >
-                          −
+                          <span className="text-lg font-bold">−</span>
                         </button>
-                        <div className="h-10 min-w-12 px-3 grid place-items-center text-sm font-semibold">
+
+                        <div className="h-10 min-w-12 px-3 grid place-items-center text-sm font-extrabold text-gray-900">
                           {qty}
                         </div>
+
                         <button
-                          className="h-10 w-10 grid place-items-center hover:bg-gray-50 rounded-e-2xl"
+                          type="button"
                           onClick={() =>
                             updateMut.mutate({
-                              productId: it.product_id,
+                              itemId: it.id,
                               quantity: qty + 1,
                             })
                           }
-                          disabled={updateMut.isPending}
+                          disabled={isBusy}
+                          className="
+                            h-10 w-10 grid place-items-center
+                            text-gray-700
+                            transition-all duration-200
+                            hover:bg-gray-50 hover:text-gray-900
+                            active:bg-gray-100 active:scale-[0.96]
+                            focus:outline-none focus:ring-2 focus:ring-black/10
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                          "
+                          aria-label="Increase quantity"
+                          title="زيادة الكمية"
                         >
-                          +
+                          <span className="text-lg font-bold">+</span>
                         </button>
                       </div>
 
+                      {/* Line total */}
                       <div className="text-sm text-gray-700">
                         {t("cart.lineTotal", { defaultValue: "الإجمالي:" })}{" "}
                         <span className="font-semibold text-gray-900">
@@ -191,6 +313,23 @@ export default function Cart() {
                         </span>
                       </div>
                     </div>
+
+                    {/* Optional: view product */}
+                    {p?.id ? (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => nav(`/products/${p.id}`)}
+                          className="
+                            text-xs text-gray-500
+                            hover:text-gray-900
+                            transition
+                          "
+                          type="button"
+                        >
+                          عرض المنتج
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -199,19 +338,15 @@ export default function Cart() {
         </div>
 
         {/* Summary */}
-        <aside className="rounded-3xl border bg-white p-5 shadow-sm h-fit">
+        <aside className="rounded-3xl border bg-white p-5 shadow-sm h-fit space-y-4">
           <h2 className="text-lg font-extrabold text-gray-900">
             {t("cart.summary", { defaultValue: "ملخص الطلب" })}
           </h2>
 
-          <div className="mt-4 space-y-3 text-sm">
+          <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between text-gray-700">
-              <span>
-                {t("cart.subtotal", { defaultValue: "الإجمالي الفرعي" })}
-              </span>
-              <span className="font-semibold text-gray-900">
-                {formatMoney(total, locale)}
-              </span>
+              <span>{t("cart.subtotal", { defaultValue: "الإجمالي الفرعي" })}</span>
+              <span className="font-semibold text-gray-900">{formatMoney(total, locale)}</span>
             </div>
 
             <div className="flex items-center justify-between text-gray-700">
@@ -226,35 +361,52 @@ export default function Cart() {
             <div className="h-px bg-gray-100" />
 
             <div className="flex items-center justify-between text-gray-900">
-              <span className="font-semibold">
-                {t("cart.total", { defaultValue: "الإجمالي" })}
-              </span>
-              <span className="text-base font-extrabold">
-                {formatMoney(grandTotal, locale)}
-              </span>
+              <span className="font-semibold">{t("cart.total", { defaultValue: "الإجمالي" })}</span>
+              <span className="text-base font-extrabold">{formatMoney(grandTotal, locale)}</span>
             </div>
+
+            <p className="text-xs text-gray-500">
+              * الخصم (إن وجد) يتم حسابه في صفحة الدفع على السيرفر لضمان الدقة.
+            </p>
           </div>
 
-          <div className="mt-5 space-y-2">
-            <Button
-              className="w-full"
-              onClick={() => alert("Checkout قريبًا 👌")}
-            >
-              {t("cart.checkout", { defaultValue: "إتمام الشراء" })}
+          <div className="space-y-2">
+            <Button className="w-full" onClick={() => nav("/checkout")} disabled={isBusy}>
+              إتمام الشراء
             </Button>
+
             <Link to="/shop" className="block">
-              <Button variant="secondary" className="w-full">
+              <Button variant="secondary" className="w-full" disabled={isBusy}>
                 {t("cart.continue", { defaultValue: "متابعة التسوق" })}
               </Button>
             </Link>
           </div>
 
-          <p className="mt-3 text-xs text-gray-500">
-            {t("cart.note", {
-              defaultValue: "ملاحظة: الدفع سيتم إضافته لاحقًا.",
-            })}
+          <p className="text-xs text-gray-500">
+            {t("cart.note", { defaultValue: "ملاحظة: سيتم تأكيد السعر النهائي بعد التحقق من المخزون." })}
           </p>
         </aside>
+      </div>
+
+      {/* Mobile Sticky Summary */}
+      <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
+        <div className="border-t bg-white/90 backdrop-blur p-3">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-gray-500">الإجمالي</div>
+              <div className="text-base font-extrabold text-gray-900 truncate">
+                {formatMoney(grandTotal, locale)}
+              </div>
+            </div>
+            <Button
+              className="h-11 px-4 rounded-2xl"
+              onClick={() => nav("/checkout")}
+              disabled={isBusy}
+            >
+              إتمام الشراء
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

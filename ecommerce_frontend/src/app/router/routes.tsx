@@ -2,6 +2,7 @@ export const routes = {
   home: "/",
   shop: "/shop",
   cart: "/cart",
+  checkout: "/checkout",
   login: "/login",
 
   admin: "/admin",
@@ -10,4 +11,5 @@ export const routes = {
   adminProducts: "/admin/products",
   adminOrders: "/admin/orders",
   adminPayments: "/admin/payments",
+  adminSettings: "/admin/settings",
 };

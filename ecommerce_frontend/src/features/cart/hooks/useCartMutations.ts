@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { addCartItem, updateCartItem, removeCartItem, clearCart } from "../api/cart.api";
 import { cartKeys } from "../api/cart.keys";
+import { getApiErrorMessage } from "../../../shared/utils/error";
 
 export function useAddToCart() {
   const qc = useQueryClient();
@@ -9,28 +10,28 @@ export function useAddToCart() {
     mutationFn: addCartItem,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: cartKeys.all });
-      toast.success("تمت الإضافة إلى السلة ✅");
+      toast.success("تمت الإضافة إلى السلة");
     },
-    onError: () => toast.error("تعذر إضافة المنتج للسلة"),
+    onError: (e) => toast.error(getApiErrorMessage(e)),
   });
 }
 
 export function useUpdateCartItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) =>
-      updateCartItem(productId, { quantity }),
+    mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
+      updateCartItem(itemId, { quantity }),
     onSuccess: () => qc.invalidateQueries({ queryKey: cartKeys.all }),
-    onError: () => toast.error("تعذر تحديث الكمية"),
+    onError: (e) => toast.error(getApiErrorMessage(e)),
   });
 }
 
 export function useRemoveCartItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (productId: number) => removeCartItem(productId),
+    mutationFn: (itemId: number) => removeCartItem(itemId),
     onSuccess: () => qc.invalidateQueries({ queryKey: cartKeys.all }),
-    onError: () => toast.error("تعذر حذف المنتج من السلة"),
+    onError: (e) => toast.error(getApiErrorMessage(e)),
   });
 }
 
@@ -39,6 +40,6 @@ export function useClearCart() {
   return useMutation({
     mutationFn: () => clearCart(),
     onSuccess: () => qc.invalidateQueries({ queryKey: cartKeys.all }),
-    onError: () => toast.error("تعذر تفريغ السلة"),
+    onError: (e) => toast.error(getApiErrorMessage(e)),
   });
 }

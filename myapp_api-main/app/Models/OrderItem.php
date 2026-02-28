@@ -17,27 +17,26 @@ class OrderItem extends Model
         'unit_price',
         'subtotal',
         'notes',
+        'options',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'quantity' => 'integer',
+        'options' => 'array',
     ];
 
-    // علاقة مع الطلب
     public function order()
     {
         return $this->belongsTo(Order::class);
     }
 
-    // علاقة مع المنتج
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    // علاقة مع المستخدم
     public function user()
     {
         return $this->belongsTo(User::class);

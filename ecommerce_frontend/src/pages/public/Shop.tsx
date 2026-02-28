@@ -232,7 +232,7 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* ✅ Sticky wrapper: toolbar + chips */}
+      {/*  Sticky wrapper: toolbar + chips */}
       <div className="sticky top-20 z-30 space-y-3 bg-gray-50/85 backdrop-blur py-2">
         <ShopResultsToolbar
           total={total}
@@ -253,7 +253,7 @@ export default function Shop() {
 
       {/* Layout */}
       <div className="grid gap-6 lg:grid-cols-12">
-        {/* ✅ Sticky sidebar on desktop */}
+        {/*  Sticky sidebar on desktop */}
         <aside className="hidden lg:block lg:col-span-3">
           <div className="lg:sticky lg:top-24">
             {catLoading ? (

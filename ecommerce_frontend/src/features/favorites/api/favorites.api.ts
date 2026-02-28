@@ -22,3 +22,9 @@ export async function toggleFavorite(productId: number) {
   const { data } = await http.post(`/my/favorites/${productId}/toggle`);
   return data; // {status,message,data:{is_favorite:true/false}}
 }
+
+
+export async function getMyFavoriteIds() {
+  const { data } = await http.get<{ status: boolean; data: number[] }>("/my/favorites/ids");
+  return data;
+}

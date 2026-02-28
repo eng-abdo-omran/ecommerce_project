@@ -12,6 +12,7 @@ export function RequireAuth() {
   const token = useAuthStore((s) => s.token);
   const location = useLocation();
 
+  // اليوسر كان رايح صافحة اتطلب منه يسجل دخول بعد مبيسجل دخول ترجعه تاني الصفحة الي كان عايز يروحها
   if (!token) {
     const returnTo = location.pathname + location.search;
     return <Navigate to={buildAuthUrl("login", returnTo)} replace />;
