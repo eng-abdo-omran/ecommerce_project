@@ -83,6 +83,8 @@ function renderOptions(opts?: CartOption[] | null) {
 export default function Cart() {
   const nav = useNavigate();
   const { t, i18n } = useTranslation();
+
+  // locale للتنسيق المالي فقط
   const locale = i18n.language === "en" ? "en-US" : "ar-EG";
 
   const token = useAuthStore((s) => s.token);
@@ -102,16 +104,16 @@ export default function Cart() {
   const isBusy = updateMut.isPending || removeMut.isPending || clearMut.isPending;
 
   if (cartQ.isLoading) {
-    return <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />;
+    return <Loader label={t("common.loading", { defaultValue: "Loading..." })} />;
   }
 
   if (cartQ.isError) {
     return (
       <div className="py-10">
         <EmptyState
-          title="حدث خطأ أثناء تحميل السلة"
+          title={t("cart.loadErrorTitle", { defaultValue: "Failed to load cart" })}
           description={getApiErrorMessage(cartQ.error)}
-          actionLabel="إعادة المحاولة"
+          actionLabel={t("common.retry", { defaultValue: "Retry" })}
           onAction={() => cartQ.refetch()}
         />
       </div>
@@ -122,16 +124,16 @@ export default function Cart() {
     return (
       <div className="py-10">
         <EmptyState
-          title={t("cart.empty", { defaultValue: "سلتك فارغة" })}
+          title={t("cart.empty", { defaultValue: "Your cart is empty" })}
           description={t("cart.emptyDesc", {
-            defaultValue: "ابدأ بإضافة منتجات من المتجر، وستظهر هنا.",
+            defaultValue: "Start adding products from the shop and they will appear here.",
           })}
-          actionLabel={t("nav.shop", { defaultValue: "المتجر" })}
+          actionLabel={t("nav.shop", { defaultValue: "Shop" })}
           onAction={() => nav("/shop")}
         />
         <div className="mt-4 flex justify-center">
           <Link to="/shop">
-            <Button variant="secondary">{t("nav.shop", { defaultValue: "المتجر" })}</Button>
+            <Button variant="secondary">{t("nav.shop", { defaultValue: "Shop" })}</Button>
           </Link>
         </div>
       </div>
@@ -144,10 +146,10 @@ export default function Cart() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">
-            {t("cart.title", { defaultValue: "سلة التسوق" })}
+            {t("cart.title", { defaultValue: "Cart" })}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            {t("cart.itemsCount", { defaultValue: "عدد العناصر:" })}{" "}
+            {t("cart.itemsCount", { defaultValue: "Items:" })}{" "}
             <span className="font-semibold text-gray-800">{items.length}</span>
           </p>
         </div>
@@ -159,11 +161,11 @@ export default function Cart() {
             onClick={() => clearMut.mutate()}
             disabled={isBusy}
           >
-            {t("cart.clear", { defaultValue: "تفريغ السلة" })}
+            {t("cart.clear", { defaultValue: "Clear cart" })}
           </Button>
 
           <Button variant="primary" onClick={() => nav("/checkout")} disabled={isBusy}>
-            إتمام الشراء
+            {t("cart.checkout", { defaultValue: "Checkout" })}
           </Button>
         </div>
       </div>
@@ -200,7 +202,7 @@ export default function Cart() {
                       />
                     ) : (
                       <div className="h-full w-full grid place-items-center text-xs text-gray-400">
-                        {t("common.noImage", { defaultValue: "لا توجد صورة" })}
+                        {t("common.noImage", { defaultValue: "No image" })}
                       </div>
                     )}
                   </div>
@@ -220,7 +222,7 @@ export default function Cart() {
                         </div>
                       </div>
 
-                      {/*  Remove button (Stylish) */}
+                      {/* Remove */}
                       <button
                         onClick={() => removeMut.mutate(it.id)}
                         disabled={isBusy}
@@ -236,15 +238,14 @@ export default function Cart() {
                           focus:outline-none focus:ring-2 focus:ring-red-500/20
                           disabled:opacity-60 disabled:cursor-not-allowed
                         "
-                        title={t("actions.remove", { defaultValue: "حذف" })}
+                        title={t("actions.remove", { defaultValue: "Remove" })}
                       >
-                        {/* icon */}
-                        <span>{t("actions.remove", { defaultValue: "حذف" })}</span>
+                        <span>{t("actions.remove", { defaultValue: "Remove" })}</span>
                       </button>
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                      {/* Qty Control (Premium hover) */}
+                      {/* Qty Control */}
                       <div
                         className="
                           inline-flex items-center rounded-2xl border bg-white
@@ -270,8 +271,8 @@ export default function Cart() {
                             focus:outline-none focus:ring-2 focus:ring-black/10
                             disabled:opacity-50 disabled:cursor-not-allowed
                           "
-                          aria-label="Decrease quantity"
-                          title="تقليل الكمية"
+                          aria-label={t("cart.decreaseQty", { defaultValue: "Decrease quantity" })}
+                          title={t("cart.decreaseQty", { defaultValue: "Decrease quantity" })}
                         >
                           <span className="text-lg font-bold">−</span>
                         </button>
@@ -298,8 +299,8 @@ export default function Cart() {
                             focus:outline-none focus:ring-2 focus:ring-black/10
                             disabled:opacity-50 disabled:cursor-not-allowed
                           "
-                          aria-label="Increase quantity"
-                          title="زيادة الكمية"
+                          aria-label={t("cart.increaseQty", { defaultValue: "Increase quantity" })}
+                          title={t("cart.increaseQty", { defaultValue: "Increase quantity" })}
                         >
                           <span className="text-lg font-bold">+</span>
                         </button>
@@ -307,26 +308,22 @@ export default function Cart() {
 
                       {/* Line total */}
                       <div className="text-sm text-gray-700">
-                        {t("cart.lineTotal", { defaultValue: "الإجمالي:" })}{" "}
+                        {t("cart.lineTotal", { defaultValue: "Line total:" })}{" "}
                         <span className="font-semibold text-gray-900">
                           {formatMoney(lineTotal, locale)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Optional: view product */}
+                    {/* View product */}
                     {p?.id ? (
                       <div className="mt-3">
                         <button
                           onClick={() => nav(`/products/${p.id}`)}
-                          className="
-                            text-xs text-gray-500
-                            hover:text-gray-900
-                            transition
-                          "
+                          className="text-xs text-gray-500 hover:text-gray-900 transition"
                           type="button"
                         >
-                          عرض المنتج
+                          {t("cart.viewProduct", { defaultValue: "View product" })}
                         </button>
                       </div>
                     ) : null}
@@ -340,20 +337,22 @@ export default function Cart() {
         {/* Summary */}
         <aside className="rounded-3xl border bg-white p-5 shadow-sm h-fit space-y-4">
           <h2 className="text-lg font-extrabold text-gray-900">
-            {t("cart.summary", { defaultValue: "ملخص الطلب" })}
+            {t("cart.summary", { defaultValue: "Order summary" })}
           </h2>
 
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between text-gray-700">
-              <span>{t("cart.subtotal", { defaultValue: "الإجمالي الفرعي" })}</span>
-              <span className="font-semibold text-gray-900">{formatMoney(total, locale)}</span>
+              <span>{t("cart.subtotal", { defaultValue: "Subtotal" })}</span>
+              <span className="font-semibold text-gray-900">
+                {formatMoney(total, locale)}
+              </span>
             </div>
 
             <div className="flex items-center justify-between text-gray-700">
-              <span>{t("cart.shipping", { defaultValue: "الشحن" })}</span>
+              <span>{t("cart.shipping", { defaultValue: "Shipping" })}</span>
               <span className="font-semibold text-gray-900">
                 {shipping === 0
-                  ? t("cart.free", { defaultValue: "مجاني" })
+                  ? t("cart.free", { defaultValue: "Free" })
                   : formatMoney(shipping, locale)}
               </span>
             </div>
@@ -361,29 +360,35 @@ export default function Cart() {
             <div className="h-px bg-gray-100" />
 
             <div className="flex items-center justify-between text-gray-900">
-              <span className="font-semibold">{t("cart.total", { defaultValue: "الإجمالي" })}</span>
-              <span className="text-base font-extrabold">{formatMoney(grandTotal, locale)}</span>
+              <span className="font-semibold">{t("cart.total", { defaultValue: "Total" })}</span>
+              <span className="text-base font-extrabold">
+                {formatMoney(grandTotal, locale)}
+              </span>
             </div>
 
             <p className="text-xs text-gray-500">
-              * الخصم (إن وجد) يتم حسابه في صفحة الدفع على السيرفر لضمان الدقة.
+              {t("cart.discountNote", {
+                defaultValue: "* Discount (if any) is calculated on the checkout page on the server for accuracy.",
+              })}
             </p>
           </div>
 
           <div className="space-y-2">
             <Button className="w-full" onClick={() => nav("/checkout")} disabled={isBusy}>
-              إتمام الشراء
+              {t("cart.checkout", { defaultValue: "Checkout" })}
             </Button>
 
             <Link to="/shop" className="block">
               <Button variant="secondary" className="w-full" disabled={isBusy}>
-                {t("cart.continue", { defaultValue: "متابعة التسوق" })}
+                {t("cart.continue", { defaultValue: "Continue shopping" })}
               </Button>
             </Link>
           </div>
 
           <p className="text-xs text-gray-500">
-            {t("cart.note", { defaultValue: "ملاحظة: سيتم تأكيد السعر النهائي بعد التحقق من المخزون." })}
+            {t("cart.note", {
+              defaultValue: "Note: The final price will be confirmed after stock verification.",
+            })}
           </p>
         </aside>
       </div>
@@ -393,17 +398,15 @@ export default function Cart() {
         <div className="border-t bg-white/90 backdrop-blur p-3">
           <div className="max-w-7xl mx-auto flex items-center gap-3">
             <div className="flex-1 min-w-0">
-              <div className="text-xs text-gray-500">الإجمالي</div>
+              <div className="text-xs text-gray-500">
+                {t("cart.grandTotalLabel", { defaultValue: "Total" })}
+              </div>
               <div className="text-base font-extrabold text-gray-900 truncate">
                 {formatMoney(grandTotal, locale)}
               </div>
             </div>
-            <Button
-              className="h-11 px-4 rounded-2xl"
-              onClick={() => nav("/checkout")}
-              disabled={isBusy}
-            >
-              إتمام الشراء
+            <Button className="h-11 px-4 rounded-2xl" onClick={() => nav("/checkout")} disabled={isBusy}>
+              {t("cart.checkout", { defaultValue: "Checkout" })}
             </Button>
           </div>
         </div>

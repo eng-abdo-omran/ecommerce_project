@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -25,22 +25,20 @@ export default function MainLayout() {
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.role);
   const isAdmin = role === 1;
-
   const isUser = Boolean(token) && role !== 1;
 
-  // keep i18n language in sync
-  if (i18n.language !== locale) i18n.changeLanguage(locale);
+  // ✅ keep i18n language in sync (language-only change, moved to effect)
+  useEffect(() => {
+    if (i18n.language !== locale) i18n.changeLanguage(locale);
+  }, [i18n, locale]);
 
   // Server counts
   const cartQ = useMyCart(Boolean(token));
-  const favQ = useMyFavorites({ page: 1, perPage: 1 }, Boolean(token)); // نقرأ total
+  const favQ = useMyFavorites({ page: 1, perPage: 1 }, Boolean(token)); // read total
 
   const cartCount = useMemo(() => {
     const items = cartQ.data?.data?.items ?? [];
-    return items.reduce(
-      (acc: number, it: any) => acc + (Number(it.quantity) || 0),
-      0,
-    );
+    return items.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 0), 0);
   }, [cartQ.data]);
 
   const favCount = favQ.data?.data?.total ?? 0;
@@ -67,49 +65,44 @@ export default function MainLayout() {
                 E
               </div>
               <span className="font-semibold text-lg text-gray-900">
-                Ecommerce
+                {t("brand.name", { defaultValue: "Ecommerce" })}
               </span>
             </Link>
 
             {/* Desktop */}
             <nav className="hidden md:flex items-center gap-8">
               <NavLink to="/" className={navLinkClass}>
-                {t("nav.home")}
+                {t("nav.home", { defaultValue: "Home" })}
               </NavLink>
+
               <NavLink to="/shop" className={navLinkClass}>
-                {t("nav.shop")}
+                {t("nav.shop", { defaultValue: "Shop" })}
               </NavLink>
 
               {isAdmin ? (
                 <NavLink to="/admin" className={navLinkClass}>
-                  {t("nav.admin")}
+                  {t("nav.admin", { defaultValue: "Dashboard" })}
                 </NavLink>
               ) : null}
 
               {isUser ? (
-                <NavLink
-                  to="/account/profile"
-                  className="relative flex items-center gap-2"
-                >
+                <NavLink to="/account/profile" className="relative flex items-center gap-2">
                   <FontAwesomeIcon icon={faUser} className="text-lg" />
-                  <span>{t("nav.account", { defaultValue: "حسابي" })}</span>
+                  <span>{t("nav.account", { defaultValue: "Account" })}</span>
                 </NavLink>
               ) : null}
 
               <NavLink to="/cart" className="relative flex items-center gap-2">
                 <FontAwesomeIcon icon={faCartShopping} className="text-lg" />
-                <span>{t("nav.cart")}</span>
-                {cartCount > 0 && (
-                  <span className={badgeClass}>{cartCount}</span>
-                )}
+                <span>{t("nav.cart", { defaultValue: "Cart" })}</span>
+                {cartCount > 0 && <span className={badgeClass}>{cartCount}</span>}
               </NavLink>
 
-              <NavLink
-                to="/favorites"
-                className="relative flex items-center gap-2"
-              >
+              <NavLink to="/favorites" className="relative flex items-center gap-2">
                 <FontAwesomeIcon icon={faHeart} className="text-lg" />
-                <span className="sr-only">المفضلة</span>
+                <span className="sr-only">
+                  {t("nav.favorites", { defaultValue: "Favorites" })}
+                </span>
                 {favCount > 0 && (
                   <span
                     className="absolute -top-2 h-5 w-5 text-xs flex items-center justify-center rounded-full bg-pink-600 text-white"
@@ -123,9 +116,11 @@ export default function MainLayout() {
               <button
                 onClick={() => toggleLocale()}
                 className="px-3 h-10 rounded-xl border bg-white hover:bg-gray-50 text-sm"
-                aria-label="Toggle language"
+                aria-label={t("common.toggleLanguage", { defaultValue: "Toggle language" })}
               >
-                {locale === "ar" ? t("lang.en") : t("lang.ar")}
+                {locale === "ar"
+                  ? t("lang.en", { defaultValue: "EN" })
+                  : t("lang.ar", { defaultValue: "AR" })}
               </button>
             </nav>
 
@@ -133,11 +128,14 @@ export default function MainLayout() {
             <button
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
               onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={
+                mobileOpen
+                  ? t("common.closeMenu", { defaultValue: "Close menu" })
+                  : t("common.toggleMenu", { defaultValue: "Toggle menu" })
+              }
+              type="button"
             >
-              <FontAwesomeIcon
-                icon={mobileOpen ? faXmark : faBars}
-                className="text-xl"
-              />
+              <FontAwesomeIcon icon={mobileOpen ? faXmark : faBars} className="text-xl" />
             </button>
           </div>
         </div>
@@ -146,39 +144,24 @@ export default function MainLayout() {
         {mobileOpen && (
           <div className="md:hidden border-t bg-white shadow-sm animate-slide-down">
             <div className="px-4 py-4 space-y-3">
-              <NavLink
-                to="/"
-                className="block text-gray-700"
-                onClick={() => setMobileOpen(false)}
-              >
-                {t("nav.home")}
+              <NavLink to="/" className="block text-gray-700" onClick={() => setMobileOpen(false)}>
+                {t("nav.home", { defaultValue: "Home" })}
               </NavLink>
 
-              <NavLink
-                to="/shop"
-                className="block text-gray-700"
-                onClick={() => setMobileOpen(false)}
-              >
-                {t("nav.shop")}
+              <NavLink to="/shop" className="block text-gray-700" onClick={() => setMobileOpen(false)}>
+                {t("nav.shop", { defaultValue: "Shop" })}
               </NavLink>
 
               {isAdmin ? (
-                <NavLink
-                  to="/admin"
-                  className="block text-gray-700"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {t("nav.admin")}
+                <NavLink to="/admin" className="block text-gray-700" onClick={() => setMobileOpen(false)}>
+                  {t("nav.admin", { defaultValue: "Dashboard" })}
                 </NavLink>
               ) : null}
 
               {isUser ? (
-                <NavLink
-                  to="/account/profile"
-                  className="relative flex items-center gap-2"
-                >
+                <NavLink to="/account/profile" className="relative flex items-center gap-2" onClick={() => setMobileOpen(false)}>
                   <FontAwesomeIcon icon={faUser} className="text-lg" />
-                  <span>{t("nav.account", { defaultValue: "حسابي" })}</span>
+                  <span>{t("nav.account", { defaultValue: "Account" })}</span>
                 </NavLink>
               ) : null}
 
@@ -187,7 +170,7 @@ export default function MainLayout() {
                 className="block flex items-center justify-between text-gray-700"
                 onClick={() => setMobileOpen(false)}
               >
-                <span>{t("nav.cart")}</span>
+                <span>{t("nav.cart", { defaultValue: "Cart" })}</span>
                 {cartCount > 0 && (
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-xs">
                     {cartCount}
@@ -202,7 +185,9 @@ export default function MainLayout() {
               >
                 <div className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faHeart} className="text-lg" />
-                  <span className="sr-only">المفضلة</span>
+                  <span className="sr-only">
+                    {t("nav.favorites", { defaultValue: "Favorites" })}
+                  </span>
                 </div>
                 {favCount > 0 && (
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-pink-600 text-white text-xs">
@@ -217,8 +202,12 @@ export default function MainLayout() {
                   setMobileOpen(false);
                 }}
                 className="w-full text-left px-3 py-2 rounded-xl border hover:bg-gray-50 text-sm"
+                aria-label={t("common.toggleLanguage", { defaultValue: "Toggle language" })}
+                type="button"
               >
-                {locale === "ar" ? t("lang.en") : t("lang.ar")}
+                {locale === "ar"
+                  ? t("lang.en", { defaultValue: "EN" })
+                  : t("lang.ar", { defaultValue: "AR" })}
               </button>
             </div>
           </div>
@@ -233,7 +222,7 @@ export default function MainLayout() {
 
       <footer className="bg-white border-t border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Ecommerce
+          © {new Date().getFullYear()} {t("brand.name", { defaultValue: "Ecommerce" })}
         </div>
       </footer>
     </div>

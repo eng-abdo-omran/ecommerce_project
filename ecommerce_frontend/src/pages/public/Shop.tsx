@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { Loader } from "../../shared/components/ui/Loader";
 import { EmptyState } from "../../shared/components/ui/EmptyState";
@@ -27,6 +28,7 @@ function parseNum(v: string | null) {
 }
 
 export default function Shop() {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
 
   const initial: ShopFilterState = useMemo(
@@ -37,6 +39,8 @@ export default function Shop() {
       max: params.get("max") ?? "",
       sort: (params.get("sort") as any) ?? "latest",
     }),
+    // intentionally empty: keep initial filters from URL once (same as your code)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -147,7 +151,10 @@ export default function Shop() {
     if (filters.search.trim()) {
       arr.push({
         key: "search",
-        label: `بحث: ${filters.search.trim()}`,
+        label: t("shop.chips.search", {
+          defaultValue: "Search: {{value}}",
+          value: filters.search.trim(),
+        }),
         onRemove: () => {
           setFilters((s) => ({ ...s, search: "" }));
           setPage(1);
@@ -158,7 +165,10 @@ export default function Shop() {
     if (filters.category) {
       arr.push({
         key: "category",
-        label: `تصنيف: ${categoryName || filters.category}`,
+        label: t("shop.chips.category", {
+          defaultValue: "Category: {{value}}",
+          value: categoryName || String(filters.category),
+        }),
         onRemove: () => {
           setFilters((s) => ({ ...s, category: null }));
           setPage(1);
@@ -169,7 +179,11 @@ export default function Shop() {
     if (filters.min.trim() || filters.max.trim()) {
       arr.push({
         key: "price",
-        label: `سعر: ${filters.min.trim() || "0"} - ${filters.max.trim() || "∞"}`,
+        label: t("shop.chips.price", {
+          defaultValue: "Price: {{min}} - {{max}}",
+          min: filters.min.trim() || "0",
+          max: filters.max.trim() || t("shop.infinity", { defaultValue: "∞" }),
+        }),
         onRemove: () => {
           setFilters((s) => ({ ...s, min: "", max: "" }));
           setPage(1);
@@ -180,16 +194,19 @@ export default function Shop() {
     if (filters.sort !== "latest") {
       const sortLabel =
         filters.sort === "price_asc"
-          ? "السعر ↑"
+          ? t("shop.sort.priceAsc", { defaultValue: "Price ↑" })
           : filters.sort === "price_desc"
-          ? "السعر ↓"
+          ? t("shop.sort.priceDesc", { defaultValue: "Price ↓" })
           : filters.sort === "name_asc"
-          ? "الاسم أ-ي"
-          : "الاسم ي-أ";
+          ? t("shop.sort.nameAsc", { defaultValue: "Name A–Z" })
+          : t("shop.sort.nameDesc", { defaultValue: "Name Z–A" });
 
       arr.push({
         key: "sort",
-        label: `ترتيب: ${sortLabel}`,
+        label: t("shop.chips.sort", {
+          defaultValue: "Sort: {{label}}",
+          label: sortLabel,
+        }),
         onRemove: () => {
           setFilters((s) => ({ ...s, sort: "latest" }));
           setPage(1);
@@ -198,7 +215,7 @@ export default function Shop() {
     }
 
     return arr;
-  }, [filters, categoryName]);
+  }, [filters, categoryName, t]);
 
   const hasActiveFilters = chips.length > 0;
 
@@ -216,23 +233,27 @@ export default function Shop() {
       {/* Header row */}
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">المتجر</h1>
-          <p className="text-sm text-gray-500">{isFetching ? "..." : ""}</p>
+          <h1 className="text-2xl font-bold">
+            {t("shop.title", { defaultValue: "Shop" })}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {isFetching ? t("common.updatingDots", { defaultValue: "..." }) : ""}
+          </p>
         </div>
 
         <div className="flex gap-2 md:hidden">
           <Button variant="secondary" onClick={() => setMobileFiltersOpen(true)}>
-            فلاتر
+            {t("shop.filters", { defaultValue: "Filters" })}
           </Button>
           {hasActiveFilters ? (
             <Button variant="ghost" onClick={clearAll}>
-              مسح الكل
+              {t("shop.clearAll", { defaultValue: "Clear all" })}
             </Button>
           ) : null}
         </div>
       </div>
 
-      {/*  Sticky wrapper: toolbar + chips */}
+      {/* Sticky wrapper: toolbar + chips */}
       <div className="sticky top-20 z-30 space-y-3 bg-gray-50/85 backdrop-blur py-2">
         <ShopResultsToolbar
           total={total}
@@ -253,12 +274,12 @@ export default function Shop() {
 
       {/* Layout */}
       <div className="grid gap-6 lg:grid-cols-12">
-        {/*  Sticky sidebar on desktop */}
+        {/* Sticky sidebar on desktop */}
         <aside className="hidden lg:block lg:col-span-3">
           <div className="lg:sticky lg:top-24">
             {catLoading ? (
               <div className="rounded-3xl border bg-white p-4 shadow-sm">
-                <Loader label="جاري التحميل..." />
+                <Loader label={t("common.loading", { defaultValue: "Loading..." })} />
               </div>
             ) : (
               <ShopFilters
@@ -278,9 +299,14 @@ export default function Shop() {
         {/* Grid */}
         <main className="lg:col-span-9 space-y-4">
           {isPending && !data ? (
-            <Loader label="جاري التحميل..." />
+            <Loader label={t("common.loading", { defaultValue: "Loading..." })} />
           ) : products.length === 0 ? (
-            <EmptyState title="لا توجد منتجات" description="جرّب تغيير الفلاتر أو مسحها." />
+            <EmptyState
+              title={t("shop.noProductsTitle", { defaultValue: "No products found" })}
+              description={t("shop.noProductsDesc", {
+                defaultValue: "Try adjusting the filters or clearing them.",
+              })}
+            />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {products.map((p) => (
@@ -293,16 +319,22 @@ export default function Shop() {
 
           {hasActiveFilters ? (
             <p className="text-xs text-gray-500">
-              تلميح: تقدر تمسح فلتر واحد من الـChips بالأعلى بدل مسح الكل.
+              {t("shop.hint", {
+                defaultValue: "Tip: You can remove a single filter from the chips above instead of clearing all.",
+              })}
             </p>
           ) : null}
         </main>
       </div>
 
       {/* Mobile Filters Drawer */}
-      <Modal open={mobileFiltersOpen} title="الفلاتر" onClose={() => setMobileFiltersOpen(false)}>
+      <Modal
+        open={mobileFiltersOpen}
+        title={t("shop.filtersTitle", { defaultValue: "Filters" })}
+        onClose={() => setMobileFiltersOpen(false)}
+      >
         {catLoading ? (
-          <Loader label="جاري التحميل..." />
+          <Loader label={t("common.loading", { defaultValue: "Loading..." })} />
         ) : (
           <ShopFilters
             value={filters}
@@ -318,10 +350,10 @@ export default function Shop() {
 
         <div className="mt-4 flex gap-2">
           <Button className="flex-1" onClick={() => setMobileFiltersOpen(false)}>
-            تطبيق
+            {t("shop.apply", { defaultValue: "Apply" })}
           </Button>
           <Button variant="secondary" className="flex-1" onClick={clearAll}>
-            مسح الكل
+            {t("shop.clearAll", { defaultValue: "Clear all" })}
           </Button>
         </div>
       </Modal>

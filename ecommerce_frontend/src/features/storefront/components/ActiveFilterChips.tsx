@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "../../../shared/components/ui/Button";
 
 type Chip = {
@@ -13,6 +14,8 @@ export function ActiveFilterChips({
   chips: Chip[];
   onClearAll: () => void;
 }) {
+  const { t } = useTranslation();
+
   if (!chips.length) return null;
 
   return (
@@ -27,7 +30,8 @@ export function ActiveFilterChips({
             key={c.key}
             onClick={c.onRemove}
             className="shrink-0 inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 transition"
-            title="إزالة الفلتر"
+            title={t("shop.chips.removeTitle", { defaultValue: "Remove filter" })}
+            type="button"
           >
             <span className="font-medium whitespace-nowrap">{c.label}</span>
             <span className="text-gray-400">✕</span>
@@ -35,14 +39,14 @@ export function ActiveFilterChips({
         ))}
 
         <Button variant="secondary" size="sm" onClick={onClearAll} className="shrink-0">
-          مسح الكل
+          {t("shop.clearAll", { defaultValue: "Clear all" })}
         </Button>
       </div>
     </div>
   );
 }
 
-/* ضع هذا في index.css مرة واحدة لو عايز اخفاء scrollbar بشكل أنيق
+/* Put this in index.css once if you want to hide scrollbar nicely
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 */

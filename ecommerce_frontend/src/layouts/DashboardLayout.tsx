@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/refs */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import {
   FaChartPie,
@@ -38,20 +39,27 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
   const locale = useLocaleStore((s) => s.locale);
   const toggleLocale = useLocaleStore((s) => s.toggleLocale);
 
-  const navItems = [
-    { to: "/admin", label: "Overview", icon: <FaChartPie /> },
-    { to: "/admin/users", label: "Users", icon: <FaUser /> },
-    { to: "/admin/orders", label: "Orders", icon: <FaShoppingBag /> },
-    { to: "/admin/categories", label: "Categories", icon: <FaTags /> },
-    { to: "/admin/brands", label: "Brands", icon: <FaTrademark /> },
-    { to: "/admin/suppliers", label: "Suppliers", icon: <FaTruck /> },
-    { to: "/admin/products", label: "Products", icon: <FaBoxOpen /> },
-    { to: "/admin/offers", label: "Offers", icon: <FaTag /> },
-    { to: "/admin/coupons", label: "Coupons", icon: <FaTicketAlt /> },
-    { to: "/admin/customers", label: "Customers", icon: <FaUsers /> },
-    { to: "/admin/stores", label: "Stores", icon: <FaStore /> },
-    { to: "/admin/reviews", label: "Reviews", icon: <FaStar /> },
-    { to: "/admin/settings", label: "Settings", icon: <FaCog /> },
+  const { t } = useTranslation();
+
+  const navItems: Array<{
+    to: string;
+    key: string;
+    defaultLabel: string;
+    icon: React.ReactNode;
+  }> = [
+    { to: "/admin", key: "admin.nav.overview", defaultLabel: "Overview", icon: <FaChartPie /> },
+    { to: "/admin/users", key: "admin.nav.users", defaultLabel: "Users", icon: <FaUser /> },
+    { to: "/admin/orders", key: "admin.nav.orders", defaultLabel: "Orders", icon: <FaShoppingBag /> },
+    { to: "/admin/categories", key: "admin.nav.categories", defaultLabel: "Categories", icon: <FaTags /> },
+    { to: "/admin/brands", key: "admin.nav.brands", defaultLabel: "Brands", icon: <FaTrademark /> },
+    { to: "/admin/suppliers", key: "admin.nav.suppliers", defaultLabel: "Suppliers", icon: <FaTruck /> },
+    { to: "/admin/products", key: "admin.nav.products", defaultLabel: "Products", icon: <FaBoxOpen /> },
+    { to: "/admin/offers", key: "admin.nav.offers", defaultLabel: "Offers", icon: <FaTag /> },
+    { to: "/admin/coupons", key: "admin.nav.coupons", defaultLabel: "Coupons", icon: <FaTicketAlt /> },
+    { to: "/admin/customers", key: "admin.nav.customers", defaultLabel: "Customers", icon: <FaUsers /> },
+    { to: "/admin/stores", key: "admin.nav.stores", defaultLabel: "Stores", icon: <FaStore /> },
+    { to: "/admin/reviews", key: "admin.nav.reviews", defaultLabel: "Reviews", icon: <FaStar /> },
+    { to: "/admin/settings", key: "admin.nav.settings", defaultLabel: "Settings", icon: <FaCog /> },
   ];
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -95,7 +103,7 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
 
   return (
     <div dir="ltr" className="min-h-screen bg-[#0b1220]">
-      {/* خلفية gradient خفيفة */}
+      {/* background */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(700px_circle_at_20%_10%,rgba(99,102,241,.15),transparent_55%),radial-gradient(700px_circle_at_90%_30%,rgba(16,185,129,.12),transparent_55%)]" />
 
       {/* Top Navbar */}
@@ -112,7 +120,8 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                     hover:bg-white/10 transition
                     focus:outline-none focus:ring-2 focus:ring-white/15
                   "
-                  aria-label="Toggle menu"
+                  aria-label={t("common.toggleMenu", { defaultValue: "Toggle menu" })}
+                  type="button"
                 >
                   {sidebarOpen ? <FaTimes /> : <FaBars />}
                 </button>
@@ -126,9 +135,11 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="font-extrabold text-white truncate">{title}</div>
+                        <div className="font-extrabold text-white truncate">
+                          {t("admin.top.title", { defaultValue: title })}
+                        </div>
 
-                        {/* ✅ Mobile Language Toggle (صغير) */}
+                        {/* Mobile language toggle */}
                         <button
                           onClick={toggleLocale}
                           className="
@@ -140,21 +151,30 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                             active:scale-[0.98]
                             grid place-items-center
                           "
-                          title={locale === "ar" ? "Switch to English" : "التحويل للعربية"}
-                          aria-label="Toggle language"
+                          title={
+                            locale === "ar"
+                              ? t("admin.top.switchToEnglish", { defaultValue: "Switch to English" })
+                              : t("admin.top.switchToArabic", { defaultValue: "Switch to Arabic" })
+                          }
+                          aria-label={t("common.toggleLanguage", { defaultValue: "Toggle language" })}
                           type="button"
                         >
-                          {locale === "ar" ? "EN" : "ع"}
+                          {locale === "ar"
+                            ? t("lang.en", { defaultValue: "EN" })
+                            : t("lang.ar", { defaultValue: "AR" })}
                         </button>
                       </div>
 
-                      {/* ✅ Welcome text + language toggle (Desktop) */}
+                      {/* Welcome + desktop language */}
                       <div className="flex items-center gap-3 mt-1">
                         <p className="text-sm text-slate-300 truncate">
-                          Welcome back{user?.name ? `, ${user.name}` : ""} — manage your store
+                          {t("admin.top.welcome", {
+                            defaultValue: "Welcome back{{name}} — manage your store",
+                            name: user?.name ? `, ${user.name}` : "",
+                          })}
                         </p>
 
-                        {/* ✅ Language Toggle (Desktop) */}
+
                         <button
                           onClick={toggleLocale}
                           className="
@@ -165,11 +185,20 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                             focus:outline-none focus:ring-2 focus:ring-white/15
                             active:scale-[0.98]
                           "
-                          title={locale === "ar" ? "Switch to English" : "التحويل للعربية"}
+                          title={
+                            locale === "ar"
+                              ? t("admin.top.switchToEnglish", { defaultValue: "Switch to English" })
+                              : t("admin.top.switchToArabic", { defaultValue: "Switch to Arabic" })
+                          }
+                          aria-label={t("common.toggleLanguage", { defaultValue: "Toggle language" })}
                           type="button"
                         >
                           <span className="opacity-80">🌐</span>
-                          <span>{locale === "ar" ? "EN" : "ع"}</span>
+                          <span>
+                            {locale === "ar"
+                              ? t("lang.en", { defaultValue: "EN" })
+                              : t("lang.ar", { defaultValue: "AR" })}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -187,11 +216,11 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                     bg-white/5 border border-white/10 text-white/90
                     hover:bg-white/10 transition
                   "
-                  title="Go to Home"
+                  title={t("admin.top.homeTitle", { defaultValue: "Go to Home" })}
                   type="button"
                 >
                   <FaHome className="opacity-90" />
-                  Home
+                  {t("admin.top.home", { defaultValue: "Home" })}
                 </button>
 
                 <button
@@ -202,11 +231,11 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                     bg-white/5 border border-white/10 text-white/90
                     hover:bg-white/10 transition
                   "
-                  title="Go to Shop"
+                  title={t("admin.top.shopTitle", { defaultValue: "Go to Shop" })}
                   type="button"
                 >
                   <FaStore className="opacity-90" />
-                  Shop
+                  {t("admin.top.shop", { defaultValue: "Shop" })}
                 </button>
 
                 <button
@@ -217,11 +246,11 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                     bg-white/5 border border-white/10 text-white/90
                     hover:bg-white/10 transition
                   "
-                  title="Go to Cart"
+                  title={t("admin.top.cartTitle", { defaultValue: "Go to Cart" })}
                   type="button"
                 >
                   <FaShoppingCart className="opacity-90" />
-                  Cart
+                  {t("admin.top.cart", { defaultValue: "Cart" })}
                 </button>
 
                 <button
@@ -232,11 +261,11 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                     bg-indigo-500/15 border border-indigo-400/25 text-indigo-100
                     hover:bg-indigo-500/25 transition
                   "
-                  title="Admin Settings"
+                  title={t("admin.top.settingsTitle", { defaultValue: "Admin Settings" })}
                   type="button"
                 >
                   <FaCog className="opacity-90" />
-                  Settings
+                  {t("admin.top.settings", { defaultValue: "Settings" })}
                 </button>
 
                 <a
@@ -249,10 +278,10 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                     bg-emerald-500/12 border border-emerald-400/20 text-emerald-100
                     hover:bg-emerald-500/20 transition
                   "
-                  title="Open Store in new tab"
+                  title={t("admin.top.openStoreTitle", { defaultValue: "Open Store in new tab" })}
                 >
                   <FaExternalLinkAlt className="opacity-90" />
-                  Open Store
+                  {t("admin.top.openStore", { defaultValue: "Open Store" })}
                 </a>
               </div>
             </div>
@@ -277,8 +306,12 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
             {/* Sidebar header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10 md:rounded-t-3xl">
               <div>
-                <div className="text-lg font-extrabold">Ecommerce</div>
-                <div className="text-xs text-white/60">Admin Panel</div>
+                <div className="text-lg font-extrabold">
+                  {t("admin.top.brand", { defaultValue: "Ecommerce" })}
+                </div>
+                <div className="text-xs text-white/60">
+                  {t("admin.top.adminPanel", { defaultValue: "Admin Panel" })}
+                </div>
               </div>
 
               <button
@@ -289,7 +322,7 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                   hover:bg-white/10 transition
                   focus:outline-none focus:ring-2 focus:ring-white/15
                 "
-                aria-label="Close menu"
+                aria-label={t("common.closeMenu", { defaultValue: "Close menu" })}
                 type="button"
               >
                 <FaTimes />
@@ -308,7 +341,7 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                 >
                   {({ isActive }) => (
                     <>
-                      {/* ✅ Active indicator bar (بدون window.location) */}
+
                       <span
                         className={clsx(
                           "absolute left-0 top-2 bottom-2 w-1 rounded-full transition",
@@ -316,7 +349,9 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                         )}
                       />
                       <span className="text-lg opacity-90">{it.icon}</span>
-                      <span className="truncate">{it.label}</span>
+                      <span className="truncate">
+                        {t(it.key, { defaultValue: it.defaultLabel })}
+                      </span>
                     </>
                   )}
                 </NavLink>
@@ -340,11 +375,11 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
                 type="button"
               >
                 <FaSignOutAlt />
-                Logout
+                {t("admin.top.logout", { defaultValue: "Logout" })}
               </button>
 
               <div className="mt-3 text-xs text-white/50 text-center">
-                v1.0 • Admin UI
+                v1.0 • {t("admin.top.adminUI", { defaultValue: "Admin UI" })}
               </div>
             </div>
           </div>
@@ -375,13 +410,13 @@ const DashboardLayout: React.FC<{ title?: string }> = ({
               to="/"
               className="rounded-2xl bg-white/5 border border-white/10 text-white/90 px-3 py-2 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10 transition"
             >
-              <FaHome /> Home
+              <FaHome /> {t("admin.top.home", { defaultValue: "Home" })}
             </Link>
             <Link
               to="/shop"
               className="rounded-2xl bg-white/5 border border-white/10 text-white/90 px-3 py-2 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10 transition"
             >
-              <FaStore /> Shop
+              <FaStore /> {t("admin.top.shop", { defaultValue: "Shop" })}
             </Link>
           </div>
         </div>

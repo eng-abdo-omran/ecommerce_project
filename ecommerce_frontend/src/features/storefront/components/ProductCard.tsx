@@ -13,7 +13,7 @@ import { useAddToCart } from "../../cart/hooks/useCartMutations";
 import { useToggleFavorite } from "../../favorites/hooks/useToggleFavorite";
 import { useFavoritesStore } from "../../../store/favorites.store";
 
-/**  Heart Icon SVG: ثابت المقاس (مش بيكبر في الموبايل) */
+/** Heart Icon SVG: fixed size (no mobile scaling issues) */
 function HeartIcon({
   filled,
   className = "",
@@ -35,10 +35,10 @@ function HeartIcon({
 }
 
 /**
- *  Detect variants (احترافي + مرن)
- * - لو list endpoint بيرجع variants array
- * - أو variants_count / has_variants
- * - لو مش متاح: "unknown" ونخلي الزر يودّي للتفاصيل كحل آمن
+ * Detect variants (robust):
+ * - if list endpoint returns variants array
+ * - or variants_count / has_variants
+ * - else "unknown" => safest: go to details
  */
 function productHasVariants(p: any): boolean | "unknown" {
   if (Array.isArray(p?.variants)) return p.variants.length > 0;
@@ -55,24 +55,26 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
   const addToCartMut = useAddToCart();
   const toggleFavMut = useToggleFavorite();
 
-  //  source of truth للمفضلة من الستورد (بيفضل صح بعد refresh)
+  //  favorite source of truth (persists after refresh)
   const fav = useFavoritesStore((s) => s.has((product as any).id));
   const toggleLocal = useFavoritesStore((s) => s.toggle);
 
   const imgSrc = useMemo(() => {
-    return resolvePublicImage((product as any).main_image) || resolvePublicImage((product as any).images);
+    return (
+      resolvePublicImage((product as any).main_image) ||
+      resolvePublicImage((product as any).images)
+    );
   }, [(product as any).main_image, (product as any).images]);
 
   const hasVariants = productHasVariants(product);
-
-  // Busy state
+  
   const isBusy = addToCartMut.isPending || toggleFavMut.isPending;
 
   function onToggleFavorite() {
     requireAuth(() => {
       const id = (product as any).id;
 
-      // optimistic: نبدّل فورًا في الستورد
+      // optimistic
       const next = !fav;
       toggleLocal(id);
 
@@ -80,10 +82,14 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
         onError: () => {
           // rollback
           toggleLocal(id);
-          toast.error("تعذر تحديث المفضلة");
+          toast.error(t("favorites.toggleFailed", { defaultValue: "Failed to update favorites" }));
         },
         onSuccess: () => {
-          toast.success(next ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة");
+          toast.success(
+            next
+              ? t("favorites.added", { defaultValue: "Added to favorites" })
+              : t("favorites.removed", { defaultValue: "Removed from favorites" })
+          );
         },
       });
     });
@@ -93,21 +99,24 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
     requireAuth(() => {
       const id = (product as any).id;
 
-      //  لو له variants أو unknown => يروح للتفاصيل لاختيار الخيارات
+      //  if variants exist (or unknown) => go to details to choose options
       if (hasVariants === true || hasVariants === "unknown") {
-        toast(t("cart.chooseOptionsHint", { defaultValue: "اختر الخيارات أولاً (لون/مقاس)..." }), {
-          icon: "🧩",
-        });
+        toast(
+          t("product.selectOptionsHint", {
+            defaultValue: "Please choose options first (e.g., color/size)...",
+          }),
+          { icon: "🧩" }
+        );
         nav(`/products/${id}`);
         return;
       }
 
-      //  مفيش variants => add مباشرة
+      // no variants => add directly
       addToCartMut.mutate(
         { product_id: id, quantity: 1 } as any,
         {
-          onSuccess: () => toast.success(t("cart.added", { defaultValue: "تمت الإضافة إلى السلة" })),
-          onError: () => toast.error(t("cart.addFailed", { defaultValue: "تعذر إضافة المنتج للسلة" })),
+          onSuccess: () => toast.success(t("cart.added", { defaultValue: "Added to cart" })),
+          onError: () => toast.error(t("cart.addFailed", { defaultValue: "Failed to add to cart" })),
         }
       );
     });
@@ -134,13 +143,13 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
               />
             ) : (
               <div className="h-full w-full grid place-items-center text-xs text-gray-400">
-                {t("common.noImage", { defaultValue: "لا توجد صورة" })}
+                {t("common.noImage", { defaultValue: "No image" })}
               </div>
             )}
           </div>
         </Link>
 
-        {/*  Favorite badge (premium hover + ثابت للموبايل) */}
+        {/* Favorite badge */}
         <button
           onClick={onToggleFavorite}
           disabled={toggleFavMut.isPending}
@@ -156,8 +165,13 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
             disabled:opacity-60 disabled:cursor-not-allowed
           "
           style={{ insetInlineStart: "0.75rem" }}
-          aria-label="toggle favorite"
-          title={fav ? t("favorites.remove", { defaultValue: "إزالة من المفضلة" }) : t("favorites.add", { defaultValue: "إضافة للمفضلة" })}
+          aria-label={t("favorites.toggle", { defaultValue: "Toggle favorite" })}
+          title={
+            fav
+              ? t("favorites.removeTitle", { defaultValue: "Remove from favorites" })
+              : t("favorites.addTitle", { defaultValue: "Add to favorites" })
+          }
+          type="button"
         >
           <HeartIcon
             filled={fav}
@@ -170,8 +184,8 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
           />
         </button>
 
-        {/*  Badge لمنتجات فيها variants */}
-        {(hasVariants === true || hasVariants === "unknown") ? (
+        {/* Variants badge */}
+        {hasVariants === true || hasVariants === "unknown" ? (
           <div className="absolute bottom-2 left-2 right-2 flex justify-center">
             <span
               className="
@@ -180,10 +194,12 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
                 px-3 py-1 text-xs text-gray-700
                 shadow-sm
               "
-              title={t("product.hasOptions", { defaultValue: "هذا المنتج له خيارات مثل اللون/المقاس" })}
+              title={t("product.hasOptions", {
+                defaultValue: "This product has options (e.g., color/size)",
+              })}
             >
               <span className="h-2 w-2 rounded-full bg-gray-700" />
-              {t("product.hasVariants", { defaultValue: "له خيارات" })}
+              {t("product.hasVariants", { defaultValue: "Has options" })}
             </span>
           </div>
         ) : null}
@@ -193,7 +209,9 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
         <div className="mt-2 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Link to={`/products/${(product as any).id}`} className="block">
-              <div className="font-semibold text-gray-900 line-clamp-1">{(product as any).name}</div>
+              <div className="font-semibold text-gray-900 line-clamp-1">
+                {(product as any).name}
+              </div>
             </Link>
             <div className="mt-1 text-sm text-gray-600">{(product as any).price}</div>
           </div>
@@ -209,14 +227,14 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
             disabled={isBusy}
             className="transition-all duration-200 hover:shadow-sm active:scale-[0.99]"
             title={
-              (hasVariants === true || hasVariants === "unknown")
-                ? t("actions.chooseOptions", { defaultValue: "اختر الخيارات" })
-                : t("actions.addToCart", { defaultValue: "أضف للسلة" })
+              hasVariants === true || hasVariants === "unknown"
+                ? t("actions.chooseOptions", { defaultValue: "Choose options" })
+                : t("actions.addToCart", { defaultValue: "Add to cart" })
             }
           >
-            {(hasVariants === true || hasVariants === "unknown")
-              ? t("actions.chooseOptions", { defaultValue: "اختر الخيارات" })
-              : t("actions.addToCart", { defaultValue: "أضف للسلة" })}
+            {hasVariants === true || hasVariants === "unknown"
+              ? t("actions.chooseOptions", { defaultValue: "Choose options" })
+              : t("actions.addToCart", { defaultValue: "Add to cart" })}
           </Button>
 
           <Button
@@ -228,8 +246,8 @@ export function ProductCard({ product }: { product: InterfaceProduct }) {
             className="transition-all duration-200 hover:shadow-sm active:scale-[0.99]"
           >
             {fav
-              ? t("actions.removeFav", { defaultValue: "إزالة" })
-              : t("actions.addFav", { defaultValue: "مفضلة" })}
+              ? t("actions.removeFav", { defaultValue: "Remove" })
+              : t("actions.addFav", { defaultValue: "Favorite" })}
           </Button>
         </div>
       </div>

@@ -16,7 +16,7 @@ import { useInterfaceProducts } from "../../features/storefront/hooks/useInterfa
 import { useAuthGate } from "../../features/auth/hooks/useAuthGate";
 import { useAddToCart } from "../../features/cart/hooks/useCartMutations";
 import { useToggleFavorite } from "../../features/favorites/hooks/useToggleFavorite";
-import { useFavoritesStore } from "../../store/favorites.store"; //  جديد
+import { useFavoritesStore } from "../../store/favorites.store";
 
 function toNumber(price: any) {
   const n = Number(price);
@@ -37,7 +37,7 @@ function formatMoney(value: number, locale = "ar-EG", currency = "EGP") {
 
 type VariantSelectionState = Record<number, number>; // variant_id => value_id
 
-/**  Heart Icon SVG: ثابت المقاس (مش بيكبر في الموبايل) */
+/** Heart Icon SVG: fixed size on mobile */
 function HeartIcon({
   filled,
   className = "",
@@ -77,11 +77,11 @@ export default function ProductDetails() {
   const { data, isLoading, isError } = useInterfaceProduct(productId);
   const product: any = data?.data;
 
-  //  Favorites: source of truth من store (يظل صحيح بعد refresh)
+  // Favorites store
   const fav = useFavoritesStore((s) => s.has(productId));
   const toggleLocal = useFavoritesStore((s) => s.toggle);
 
-  // الصور
+  // Images
   const images: any[] = Array.isArray(product?.images) ? product.images : [];
   const mainImageSrc =
     resolvePublicImage(product?.main_image) ||
@@ -100,13 +100,12 @@ export default function ProductDetails() {
   const relatedQuery = useInterfaceProducts({ page: 1, perPage: 8, category: categoryId });
   const relatedProducts: any[] = (relatedQuery.data?.data?.data ?? []).filter((p: any) => p?.id !== productId);
 
-  // variants
-  const variants: any[] = Array.isArray(product?.variants) ? product.variants : [];
 
-  // selection بالـ IDs
+  const variants: any[] = Array.isArray(product?.variants) ? product.variants : [];
+  
   const [variantSelection, setVariantSelection] = useState<VariantSelectionState>({});
 
-  // هل اختار كل الـ variants؟
+
   const allVariantsSelected = useMemo(() => {
     if (!variants.length) return true;
     return variants.every((v: any) => {
@@ -116,15 +115,15 @@ export default function ProductDetails() {
   }, [variants, variantSelection]);
 
   if (isLoading) {
-    return <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />;
+    return <Loader label={t("common.loading", { defaultValue: "Loading..." })} />;
   }
 
   if (isError || !product) {
     return (
       <EmptyState
-        title={t("product.notFound", { defaultValue: "تعذر تحميل المنتج" })}
-        description={t("product.notFoundDesc", { defaultValue: "حاول مرة أخرى أو ارجع للمتجر." })}
-        actionLabel={t("nav.shop", { defaultValue: "الذهاب للمتجر" })}
+        title={t("product.notFound", { defaultValue: "Failed to load product" })}
+        description={t("product.notFoundDesc", { defaultValue: "Try again or go back to the shop." })}
+        actionLabel={t("nav.shop", { defaultValue: "Shop" })}
         onAction={() => (window.location.href = "/shop")}
       />
     );
@@ -135,7 +134,8 @@ export default function ProductDetails() {
 
   async function handleShare() {
     const url = window.location.href;
-    const title = product?.name ?? "Product";
+    const title = product?.name ?? t("product.defaultTitle", { defaultValue: "Product" });
+
     try {
       if (navigator.share) {
         await navigator.share({ title, url });
@@ -144,16 +144,17 @@ export default function ProductDetails() {
     } catch {
       /* empty */
     }
+
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("تم نسخ الرابط ");
+      toast.success(t("product.linkCopied", { defaultValue: "Link copied ✅" }));
     } catch {
-      window.prompt("انسخ الرابط:", url);
+      window.prompt(t("product.copyPrompt", { defaultValue: "Copy link:" }), url);
     }
   }
 
   function buildOptionsPayload() {
-    // [{variant_id, value_id}]
+
     const entries = Object.entries(variantSelection);
     return entries.map(([variant_id, value_id]) => ({
       variant_id: Number(variant_id),
@@ -164,11 +165,16 @@ export default function ProductDetails() {
   function addToCart() {
     requireAuth(() => {
       if (qty < 1) {
-        toast.error("الكمية غير صحيحة");
+        toast.error(t("product.invalidQty", { defaultValue: "Invalid quantity" }));
         return;
       }
+
       if (!allVariantsSelected) {
-        toast.error("من فضلك اختر كل الخيارات المطلوبة (مثل اللون/المقاس)");
+        toast.error(
+          t("product.selectAllOptionsToast", {
+            defaultValue: "Please choose all required options (e.g., color/size).",
+          })
+        );
         return;
       }
 
@@ -181,14 +187,14 @@ export default function ProductDetails() {
           options,
         } as any,
         {
-          onSuccess: () => toast.success("تمت الإضافة إلى السلة"),
-          onError: () => toast.error("تعذر إضافة المنتج للسلة"),
+          onSuccess: () => toast.success(t("cart.added", { defaultValue: "Added to cart" })),
+          onError: () => toast.error(t("cart.addFailed", { defaultValue: "Failed to add to cart" })),
         }
       );
     });
   }
 
-  //  Toggle Favorite (optimistic + rollback) باستخدام store
+  
   function toggleFav() {
     requireAuth(() => {
       const id = product.id;
@@ -201,10 +207,14 @@ export default function ProductDetails() {
         onError: () => {
           // rollback
           toggleLocal(id);
-          toast.error("تعذر تحديث المفضلة");
+          toast.error(t("favorites.toggleFailed", { defaultValue: "Failed to update favorites" }));
         },
         onSuccess: () => {
-          toast.success(next ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة");
+          toast.success(
+            next
+              ? t("favorites.added", { defaultValue: "Added to favorites" })
+              : t("favorites.removed", { defaultValue: "Removed from favorites" })
+          );
         },
       });
     });
@@ -215,11 +225,11 @@ export default function ProductDetails() {
       {/* Breadcrumb */}
       <div className="text-sm text-gray-500">
         <Link to="/" className="hover:text-gray-800">
-          {t("nav.home", { defaultValue: "الرئيسية" })}
+          {t("nav.home", { defaultValue: "Home" })}
         </Link>
         <span className="mx-2">/</span>
         <Link to="/shop" className="hover:text-gray-800">
-          {t("nav.shop", { defaultValue: "المتجر" })}
+          {t("nav.shop", { defaultValue: "Shop" })}
         </Link>
         <span className="mx-2">/</span>
         <span className="text-gray-800 font-medium">{product.name}</span>
@@ -241,7 +251,7 @@ export default function ProductDetails() {
                 />
               ) : (
                 <div className="w-full h-full grid place-items-center text-xs text-gray-400">
-                  {t("common.noImage", { defaultValue: "لا توجد صورة" })}
+                  {t("common.noImage", { defaultValue: "No image" })}
                 </div>
               )}
             </div>
@@ -285,7 +295,7 @@ export default function ProductDetails() {
                 {product.name}
               </h1>
 
-              {/*  Favorite icon button (SVG + stateful) */}
+              {/* Favorite icon */}
               <button
                 onClick={toggleFav}
                 disabled={toggleFavMut.isPending}
@@ -298,7 +308,11 @@ export default function ProductDetails() {
                   focus:outline-none focus:ring-2 focus:ring-black/10
                   disabled:opacity-60 disabled:cursor-not-allowed
                 "
-                title={fav ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                title={
+                  fav
+                    ? t("favorites.removeTitle", { defaultValue: "Remove from favorites" })
+                    : t("favorites.addTitle", { defaultValue: "Add to favorites" })
+                }
                 type="button"
               >
                 <HeartIcon
@@ -309,15 +323,13 @@ export default function ProductDetails() {
             </div>
 
             <div className="mt-3 flex flex-wrap items-baseline gap-3">
-              <div className="text-2xl font-extrabold text-gray-900">
-                {formatMoney(price, locale)}
-              </div>
+              <div className="text-2xl font-extrabold text-gray-900">{formatMoney(price, locale)}</div>
               {compare > 0 && compare > price ? (
                 <div className="text-sm text-gray-500 line-through">{formatMoney(compare, locale)}</div>
               ) : null}
               <div className="ms-auto">
                 <Button variant="secondary" size="sm" onClick={handleShare}>
-                  مشاركة / نسخ الرابط
+                  {t("product.share", { defaultValue: "Share / Copy link" })}
                 </Button>
               </div>
             </div>
@@ -325,12 +337,14 @@ export default function ProductDetails() {
             <div className="mt-3 text-sm text-gray-600 space-y-1">
               {product.sku ? (
                 <div>
-                  SKU: <span className="text-gray-800 font-medium">{product.sku}</span>
+                  {t("product.sku", { defaultValue: "SKU:" })}{" "}
+                  <span className="text-gray-800 font-medium">{product.sku}</span>
                 </div>
               ) : null}
+
               {product.category?.name ? (
                 <div>
-                  {t("product.category", { defaultValue: "التصنيف:" })}{" "}
+                  {t("product.category", { defaultValue: "Category:" })}{" "}
                   <span className="text-gray-800 font-medium">{product.category.name}</span>
                 </div>
               ) : null}
@@ -343,11 +357,13 @@ export default function ProductDetails() {
             {/* Variants */}
             {variants.length > 0 ? (
               <div className="mt-5 space-y-3">
-                <div className="font-semibold text-gray-900">الخيارات</div>
+                <div className="font-semibold text-gray-900">
+                  {t("product.options", { defaultValue: "Options" })}
+                </div>
 
                 {variants.map((v: any, i: number) => {
                   const variantId = Number(v?.id);
-                  const name = v?.name ?? `Option ${i + 1}`;
+                  const name = v?.name ?? t("product.option", { defaultValue: "Option {{n}}", n: i + 1 });
                   const values: any[] = Array.isArray(v?.values) ? v.values : [];
 
                   return (
@@ -357,7 +373,7 @@ export default function ProductDetails() {
                       <div className="flex flex-wrap gap-2">
                         {values.map((val: any, j: number) => {
                           const valueId = Number(val?.id);
-                          const label = val?.value ?? val?.name ?? `Value ${j + 1}`;
+                          const label = val?.value ?? val?.name ?? t("product.value", { defaultValue: "Value {{n}}", n: j + 1 });
                           const selected = variantId && valueId && variantSelection[variantId] === valueId;
 
                           return (
@@ -385,7 +401,9 @@ export default function ProductDetails() {
 
                 {!allVariantsSelected ? (
                   <div className="text-xs text-red-600">
-                    اختر كل الخيارات المطلوبة قبل الإضافة للسلة.
+                    {t("product.selectAllOptionsHint", {
+                      defaultValue: "Choose all required options before adding to cart.",
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -393,7 +411,9 @@ export default function ProductDetails() {
 
             {/* Qty */}
             <div className="mt-5 flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-gray-900">الكمية</div>
+              <div className="text-sm font-semibold text-gray-900">
+                {t("product.quantity", { defaultValue: "Quantity" })}
+              </div>
 
               <div className="inline-flex items-center rounded-2xl border bg-white shadow-sm overflow-hidden">
                 <button
@@ -406,7 +426,7 @@ export default function ProductDetails() {
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
                   disabled={qty <= 1}
                   type="button"
-                  title="تقليل"
+                  title={t("product.decrease", { defaultValue: "Decrease" })}
                 >
                   <span className="text-lg font-bold">−</span>
                 </button>
@@ -423,7 +443,7 @@ export default function ProductDetails() {
                   "
                   onClick={() => setQty((q) => q + 1)}
                   type="button"
-                  title="زيادة"
+                  title={t("product.increase", { defaultValue: "Increase" })}
                 >
                   <span className="text-lg font-bold">+</span>
                 </button>
@@ -438,18 +458,17 @@ export default function ProductDetails() {
                 onClick={addToCart}
                 disabled={!allVariantsSelected}
               >
-                {t("actions.addToCart", { defaultValue: "أضف للسلة" })}
+                {t("actions.addToCart", { defaultValue: "Add to cart" })}
               </Button>
 
-              {/*  Favorite button reflects state */}
               <Button
                 variant={fav ? "danger" : "secondary"}
                 isLoading={toggleFavMut.isPending}
                 onClick={toggleFav}
               >
                 {fav
-                  ? t("actions.removeFav", { defaultValue: "إزالة" })
-                  : t("actions.addFav", { defaultValue: "مفضلة" })}
+                  ? t("actions.removeFav", { defaultValue: "Remove" })
+                  : t("actions.addFav", { defaultValue: "Favorite" })}
               </Button>
             </div>
           </div>
@@ -464,7 +483,7 @@ export default function ProductDetails() {
                     onClick={() => setOpenSection((s) => (s === "details" ? null : "details"))}
                     type="button"
                   >
-                    <span>التفاصيل</span>
+                    <span>{t("product.details", { defaultValue: "Details" })}</span>
                     <span className="text-gray-400">{openSection === "details" ? "−" : "+"}</span>
                   </button>
                   {openSection === "details" ? (
@@ -482,7 +501,7 @@ export default function ProductDetails() {
                     onClick={() => setOpenSection((s) => (s === "features" ? null : "features"))}
                     type="button"
                   >
-                    <span>المميزات</span>
+                    <span>{t("product.features", { defaultValue: "Features" })}</span>
                     <span className="text-gray-400">{openSection === "features" ? "−" : "+"}</span>
                   </button>
                   {openSection === "features" ? (
@@ -498,7 +517,11 @@ export default function ProductDetails() {
       </div>
 
       {/* Zoom Modal */}
-      <Modal open={zoomOpen} title="معاينة الصورة" onClose={() => setZoomOpen(false)}>
+      <Modal
+        open={zoomOpen}
+        title={t("product.previewImage", { defaultValue: "Image preview" })}
+        onClose={() => setZoomOpen(false)}
+      >
         <div className="rounded-2xl border bg-gray-50 overflow-hidden">
           <img
             src={activeImageSrc}
@@ -516,11 +539,9 @@ export default function ProductDetails() {
           <div className="max-w-7xl mx-auto flex items-center gap-2">
             <div className="flex-1 min-w-0">
               <div className="text-xs text-gray-500">
-                {t("cart.total", { defaultValue: "السعر" })}
+                {t("product.priceLabel", { defaultValue: "Price" })}
               </div>
-              <div className="text-base font-extrabold text-gray-900 truncate">
-                {formatMoney(price, locale)}
-              </div>
+              <div className="text-base font-extrabold text-gray-900 truncate">{formatMoney(price, locale)}</div>
             </div>
             <Button
               className="h-11 px-4 rounded-2xl"
@@ -528,7 +549,7 @@ export default function ProductDetails() {
               onClick={addToCart}
               disabled={!allVariantsSelected}
             >
-              {t("actions.addToCart", { defaultValue: "أضف للسلة" })}
+              {t("actions.addToCart", { defaultValue: "Add to cart" })}
             </Button>
           </div>
         </div>
@@ -537,18 +558,20 @@ export default function ProductDetails() {
       {/* Related */}
       <section className="space-y-4">
         <div className="flex items-end justify-between">
-          <h2 className="text-xl font-extrabold text-gray-900">منتجات مشابهة</h2>
+          <h2 className="text-xl font-extrabold text-gray-900">
+            {t("product.related", { defaultValue: "Related products" })}
+          </h2>
           <Link to="/shop">
             <Button variant="secondary" size="sm">
-              عرض المزيد
+              {t("product.viewMore", { defaultValue: "View more" })}
             </Button>
           </Link>
         </div>
 
         {relatedQuery.isLoading ? (
-          <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />
+          <Loader label={t("common.loading", { defaultValue: "Loading..." })} />
         ) : relatedProducts.length === 0 ? (
-          <EmptyState title="لا توجد منتجات مشابهة حالياً" />
+          <EmptyState title={t("product.noRelated", { defaultValue: "No related products right now" })} />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {relatedProducts.map((p: any) => (

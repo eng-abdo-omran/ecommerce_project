@@ -25,28 +25,28 @@ export default function Favorites() {
   const { data, isLoading, isFetching, isError, error, refetch } = useMyFavorites(
     { page, perPage },
     Boolean(token),
-  ); // hook موجود عندك [1](https://fcibuedu-my.sharepoint.com/personal/abdelrahmanmohammed_fci_bu_edu_eg/Documents/Microsoft%20Copilot%20Chat%20Files/%D9%85%D9%84%D9%81%D8%A7%D8%AA%20%D8%A7%D9%84%D9%80%20Frontend.txt)
+  );
 
   const pagination = data?.data;
   const raw = pagination?.data ?? [];
 
   // memo لتقليل re-render
-  const products = useMemo(() => normalizeFavoriteProducts(raw), [raw]); // normalize موجود عندك [1](https://fcibuedu-my.sharepoint.com/personal/abdelrahmanmohammed_fci_bu_edu_eg/Documents/Microsoft%20Copilot%20Chat%20Files/%D9%85%D9%84%D9%81%D8%A7%D8%AA%20%D8%A7%D9%84%D9%80%20Frontend.txt)
+  const products = useMemo(() => normalizeFavoriteProducts(raw), [raw]);
   const totalCount = pagination?.total ?? products.length;
 
   // Loading أول مرة
   if (isLoading) {
-    return <Loader label={t("common.loading", { defaultValue: "جاري التحميل..." })} />; // Loader موجود عندك [1](https://fcibuedu-my.sharepoint.com/personal/abdelrahmanmohammed_fci_bu_edu_eg/Documents/Microsoft%20Copilot%20Chat%20Files/%D9%85%D9%84%D9%81%D8%A7%D8%AA%20%D8%A7%D9%84%D9%80%20Frontend.txt)
+    return <Loader label={t("common.loading", { defaultValue: "Loading..." })} />;
   }
 
-  // Error state احترافي
+  // Error state
   if (isError) {
     return (
       <div className="py-10">
         <EmptyState
-          title={t("common.error", { defaultValue: "حدث خطأ" })}
+          title={t("common.error", { defaultValue: "Something went wrong" })}
           description={getApiErrorMessage(error)}
-          actionLabel={t("common.retry", { defaultValue: "إعادة المحاولة" })}
+          actionLabel={t("common.retry", { defaultValue: "Retry" })}
           onAction={() => refetch()}
         />
       </div>
@@ -58,16 +58,16 @@ export default function Favorites() {
     return (
       <div className="py-10">
         <EmptyState
-          title={t("favorites.empty", { defaultValue: "لا توجد منتجات في المفضلة" })}
+          title={t("favorites.empty", { defaultValue: "No favorite products yet" })}
           description={t("favorites.emptyDesc", {
-            defaultValue: "ابدأ بإضافة منتجات للمفضلة من المتجر.",
+            defaultValue: "Start adding products to your favorites from the shop.",
           })}
-          actionLabel={t("nav.shop", { defaultValue: "المتجر" })}
+          actionLabel={t("nav.shop", { defaultValue: "Shop" })}
           onAction={() => nav("/shop")}
         />
         <div className="mt-4 flex justify-center">
           <Link to="/shop">
-            <Button variant="secondary">{t("nav.shop", { defaultValue: "المتجر" })}</Button>
+            <Button variant="secondary">{t("nav.shop", { defaultValue: "Shop" })}</Button>
           </Link>
         </div>
       </div>
@@ -85,16 +85,17 @@ export default function Favorites() {
       >
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">
-            {t("favorites.title", { defaultValue: "المفضلة" })}
+            {t("favorites.title", { defaultValue: "Favorites" })}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            {t("favorites.count", { defaultValue: "عدد المنتجات:" })}{" "}
+            {t("favorites.count", { defaultValue: "Products count:" })}{" "}
             <span className="font-semibold text-gray-900">{totalCount}</span>
+
             {isFetching ? (
               <span className="ms-2 inline-flex items-center gap-2 text-xs text-gray-500">
                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
-                {t("common.updating", { defaultValue: "جارِ التحديث..." })}
+                {t("common.updating", { defaultValue: "Updating..." })}
               </span>
             ) : null}
           </p>
@@ -102,10 +103,10 @@ export default function Favorites() {
 
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => nav("/shop")}>
-            {t("nav.shop", { defaultValue: "المتجر" })}
+            {t("nav.shop", { defaultValue: "Shop" })}
           </Button>
           <Button onClick={() => nav("/cart")}>
-            {t("nav.cart", { defaultValue: "السلة" })}
+            {t("nav.cart", { defaultValue: "Cart" })}
           </Button>
         </div>
       </div>
@@ -135,7 +136,6 @@ export default function Favorites() {
         page={pagination?.current_page ?? page}
         lastPage={pagination?.last_page ?? 1}
         onPageChange={(next) => {
-          // UX: اسكرول لفوق خفيف لما يغير الصفحة
           setPage(next);
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
@@ -147,14 +147,14 @@ export default function Favorites() {
           <div className="max-w-7xl mx-auto flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="text-xs text-gray-500">
-                {t("favorites.title", { defaultValue: "المفضلة" })}
+                {t("favorites.title", { defaultValue: "Favorites" })}
               </div>
               <div className="text-base font-extrabold text-gray-900 truncate">
-                {t("favorites.count", { defaultValue: "عدد المنتجات:" })} {totalCount}
+                {t("favorites.count", { defaultValue: "Products count:" })} {totalCount}
               </div>
             </div>
             <Button className="h-11 px-4 rounded-2xl" onClick={() => nav("/shop")}>
-              {t("nav.shop", { defaultValue: "المتجر" })}
+              {t("nav.shop", { defaultValue: "Shop" })}
             </Button>
           </div>
         </div>

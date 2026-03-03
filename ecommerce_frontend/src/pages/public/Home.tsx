@@ -42,6 +42,7 @@ function SectionHeader({
 }
 
 function CategoryCard({ c }: { c: InterfaceCategory }) {
+  const { t } = useTranslation();
   const imgSrc = resolvePublicImage(c.image_url);
 
   return (
@@ -60,7 +61,9 @@ function CategoryCard({ c }: { c: InterfaceCategory }) {
               onError={(e) => (e.currentTarget.src = "/placeholder.png")}
             />
           ) : (
-            <span className="text-xs text-gray-400">—</span>
+            <span className="text-xs text-gray-400">
+              {t("common.noImage", { defaultValue: "No image" })}
+            </span>
           )}
         </div>
         <div className="min-w-0">
@@ -92,54 +95,68 @@ export default function Home() {
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-xs text-gray-700">
                 <span className="h-2 w-2 rounded-full bg-green-500" />
-                {t("home.badge", { defaultValue: "تجربة تسوق أسرع وأسهل" })}
+                {t("home.badge", { defaultValue: "Faster, smarter shopping" })}
               </div>
 
               <h1 className="text-3xl md:text-5xl font-extrabold leading-tight text-gray-900">
                 {t("home.heroTitle", {
-                  defaultValue: "تجربة متجر حديثة — منتجات مختارة بعناية وبأفضل قيمة",
+                  defaultValue: "A modern store experience — curated products at the best value",
                 })}
               </h1>
 
               <p className="text-gray-600 md:text-lg">
                 {t("home.heroDesc", {
-                  defaultValue: "تصنيفات واضحة، منتجات بجودة عالية، وإضافة للسلة/المفضلة بضغطة واحدة.",
+                  defaultValue: "Clear categories, high-quality products, and one-click add to cart/favorites.",
                 })}
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link to="/shop">
                   <Button variant="primary" size="lg">
-                    {t("home.ctaShop", { defaultValue: "ابدأ التسوق" })}
+                    {t("home.ctaShop", { defaultValue: "Shop now" })}
                   </Button>
                 </Link>
                 <Link to="/favorites">
                   <Button variant="secondary" size="lg">
-                    {t("home.ctaFav", { defaultValue: "شاهد المفضلة" })}
+                    {t("home.ctaFav", { defaultValue: "View favorites" })}
                   </Button>
                 </Link>
               </div>
 
               <div className="max-w-xl">
-                <Input placeholder={t("common.search")} />
+                <Input placeholder={t("common.search", { defaultValue: "Search products..." })} />
                 <p className="mt-2 text-xs text-gray-500">
-                  {t("home.searchHint", { defaultValue: "ابحث بالاسم أو النوع أو العلامة" })}
+                  {t("home.searchHint", { defaultValue: "Search by name, type, or brand" })}
                 </p>
               </div>
 
               {/* Trust strip */}
               <div className="grid grid-cols-3 gap-3 pt-2">
                 <div className="rounded-2xl border bg-white/70 p-3 text-center">
-                  <div className="text-lg font-extrabold text-gray-900">24/7</div>
-                  <div className="text-xs text-gray-600">{t("home.trust1", { defaultValue: "دعم مستمر" })}</div>
+                  <div className="text-lg font-extrabold text-gray-900">
+                    {t("home.trustSupportValue", { defaultValue: "24/7" })}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {t("home.trustSupportLabel", { defaultValue: "Always support" })}
+                  </div>
                 </div>
+
                 <div className="rounded-2xl border bg-white/70 p-3 text-center">
-                  <div className="text-lg font-extrabold text-gray-900">Fast</div>
-                  <div className="text-xs text-gray-600">{t("home.trust2", { defaultValue: "توصيل سريع" })}</div>
+                  <div className="text-lg font-extrabold text-gray-900">
+                    {t("home.trustFastValue", { defaultValue: "Fast" })}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {t("home.trustFastLabel", { defaultValue: "Fast delivery" })}
+                  </div>
                 </div>
+
                 <div className="rounded-2xl border bg-white/70 p-3 text-center">
-                  <div className="text-lg font-extrabold text-gray-900">Secure</div>
-                  <div className="text-xs text-gray-600">{t("home.trust3", { defaultValue: "تجربة آمنة" })}</div>
+                  <div className="text-lg font-extrabold text-gray-900">
+                    {t("home.trustSecureValue", { defaultValue: "Secure" })}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {t("home.trustSecureLabel", { defaultValue: "Secure experience" })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -149,19 +166,33 @@ export default function Home() {
               <div className="rounded-[2rem] border bg-white p-6 shadow-sm">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-2xl bg-gradient-to-b from-gray-50 to-white border p-4">
-                    <div className="text-sm text-gray-600">{t("home.card1", { defaultValue: "مختارات اليوم" })}</div>
-                    <div className="mt-2 text-2xl font-extrabold text-gray-900">Top Picks</div>
+                    <div className="text-sm text-gray-600">
+                      {t("home.card1", { defaultValue: "Today's picks" })}
+                    </div>
+                    <div className="mt-2 text-2xl font-extrabold text-gray-900">
+                      {t("home.card1b", { defaultValue: "Top Picks" })}
+                    </div>
                   </div>
+
                   <div className="rounded-2xl bg-gradient-to-b from-gray-50 to-white border p-4">
-                    <div className="text-sm text-gray-600">{t("home.card2", { defaultValue: "أضف بضغطة" })}</div>
-                    <div className="mt-2 text-2xl font-extrabold text-gray-900">Cart ♥</div>
+                    <div className="text-sm text-gray-600">
+                      {t("home.card2", { defaultValue: "One-click add" })}
+                    </div>
+                    <div className="mt-2 text-2xl font-extrabold text-gray-900">
+                      {t("home.card2b", { defaultValue: "Cart & Favorites" })}
+                    </div>
                   </div>
+
                   <div className="col-span-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-fuchsia-600 p-5 text-white">
-                    <div className="text-sm opacity-90">{t("home.card3", { defaultValue: "واجهة مودرن" })}</div>
-                    <div className="mt-1 text-2xl font-extrabold">{t("home.card3b", { defaultValue: "وتجربة استخدام ممتازة" })}</div>
+                    <div className="text-sm opacity-90">
+                      {t("home.card3", { defaultValue: "Modern UI" })}
+                    </div>
+                    <div className="mt-1 text-2xl font-extrabold">
+                      {t("home.card3b", { defaultValue: "And a great user experience" })}
+                    </div>
                     <div className="mt-3">
                       <Link to="/shop" className="underline underline-offset-4">
-                        {t("home.card3c", { defaultValue: "تصفح المنتجات" })}
+                        {t("home.card3c", { defaultValue: "Browse products" })}
                       </Link>
                     </div>
                   </div>
@@ -179,16 +210,16 @@ export default function Home() {
       <Reveal>
         <section className="space-y-4">
           <SectionHeader
-            title={t("home.categoriesTitle", { defaultValue: "تصفح حسب التصنيف" })}
-            subtitle={t("home.categoriesSub", { defaultValue: "اختار القسم المناسب وابدأ بسرعة" })}
-            actionLabel={t("home.viewAll", { defaultValue: "عرض الكل" })}
+            title={t("home.categoriesTitle", { defaultValue: "Browse by category" })}
+            subtitle={t("home.categoriesSub", { defaultValue: "Pick a category and start shopping" })}
+            actionLabel={t("home.viewAll", { defaultValue: "View all" })}
             actionTo="/shop"
           />
 
           {categoriesQuery.isLoading ? (
             <CategorySkeleton count={8} />
           ) : categories.length === 0 ? (
-            <EmptyState title={t("home.noCategories", { defaultValue: "لا توجد تصنيفات حالياً" })} />
+            <EmptyState title={t("home.noCategories", { defaultValue: "No categories yet" })} />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {categories.slice(0, 8).map((c) => (
@@ -203,16 +234,16 @@ export default function Home() {
       <Reveal delayMs={80}>
         <section className="space-y-4">
           <SectionHeader
-            title={t("home.featuredTitle", { defaultValue: "مختارات مميزة" })}
-            subtitle={t("home.featuredSub", { defaultValue: "أفضل المنتجات — زر للسلة وزر للمفضلة" })}
-            actionLabel={t("home.viewShop", { defaultValue: "إلى المتجر" })}
+            title={t("home.featuredTitle", { defaultValue: "Featured products" })}
+            subtitle={t("home.featuredSub", { defaultValue: "Top picks — cart + favorite buttons" })}
+            actionLabel={t("home.viewShop", { defaultValue: "Go to shop" })}
             actionTo="/shop"
           />
 
           {featured.isLoading ? (
             <GridSkeleton count={8} />
           ) : featuredProducts.length === 0 ? (
-            <EmptyState title={t("shop.empty")} />
+            <EmptyState title={t("shop.empty", { defaultValue: "No products found" })} />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {featuredProducts.map((p) => (
@@ -227,16 +258,16 @@ export default function Home() {
       <Reveal delayMs={120}>
         <section className="space-y-4">
           <SectionHeader
-            title={t("home.newArrivalsTitle", { defaultValue: "وصل حديثًا" })}
-            subtitle={t("home.newArrivalsSub", { defaultValue: "أحدث الإضافات إلى المتجر" })}
-            actionLabel={t("home.viewShop", { defaultValue: "عرض المزيد" })}
+            title={t("home.newArrivalsTitle", { defaultValue: "New arrivals" })}
+            subtitle={t("home.newArrivalsSub", { defaultValue: "Latest additions to the shop" })}
+            actionLabel={t("home.viewShop", { defaultValue: "View more" })}
             actionTo="/shop"
           />
 
           {newArrivals.isLoading ? (
             <GridSkeleton count={8} />
           ) : newArrivalProducts.length === 0 ? (
-            <EmptyState title={t("shop.empty")} />
+            <EmptyState title={t("shop.empty", { defaultValue: "No products found" })} />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {newArrivalProducts.map((p) => (
@@ -251,16 +282,16 @@ export default function Home() {
       <Reveal delayMs={160}>
         <section className="space-y-4">
           <SectionHeader
-            title={t("home.bestSellersTitle", { defaultValue: "الأكثر مبيعًا" })}
-            subtitle={t("home.bestSellersSub", { defaultValue: "منتجات عليها طلب عالي" })}
-            actionLabel={t("home.viewShop", { defaultValue: "عرض المزيد" })}
+            title={t("home.bestSellersTitle", { defaultValue: "Best sellers" })}
+            subtitle={t("home.bestSellersSub", { defaultValue: "Products with high demand" })}
+            actionLabel={t("home.viewShop", { defaultValue: "View more" })}
             actionTo="/shop"
           />
 
           {bestSellers.isLoading ? (
             <GridSkeleton count={8} />
           ) : bestSellerProducts.length === 0 ? (
-            <EmptyState title={t("shop.empty")} />
+            <EmptyState title={t("shop.empty", { defaultValue: "No products found" })} />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {bestSellerProducts.map((p) => (
@@ -277,19 +308,19 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-6 items-center">
             <div>
               <h3 className="text-2xl font-extrabold text-gray-900">
-                {t("home.newsTitle", { defaultValue: "اشترك لتصلك أحدث العروض" })}
+                {t("home.newsTitle", { defaultValue: "Subscribe for the latest deals" })}
               </h3>
               <p className="mt-2 text-gray-600">
-                {t("home.newsDesc", { defaultValue: "سجل بريدك واحصل على تحديثات وخصومات حصرية." })}
+                {t("home.newsDesc", { defaultValue: "Enter your email and get updates & exclusive discounts." })}
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
-                <Input placeholder={t("home.email", { defaultValue: "البريد الإلكتروني" })} />
+                <Input placeholder={t("home.email", { defaultValue: "Email" })} />
               </div>
               <Button variant="primary" size="lg">
-                {t("home.subscribe", { defaultValue: "اشتراك" })}
+                {t("home.subscribe", { defaultValue: "Subscribe" })}
               </Button>
             </div>
           </div>
